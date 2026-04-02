@@ -1,0 +1,80 @@
+---
+title: "How to Connect Wallets to Testnet"
+icon: "flask-vial"
+---
+
+This guide walks you through connecting MetaMask and Keplr wallets to the NVNM L2 Testnet, _(powered by the L1 MANTRA Dukong Testnet)_.
+
+## MetaMask Setup
+
+<Note>
+  MetaMask is currently the recommended wallet as it can correctly render balances for both EVM, NVNM's Parent L1: MANTRA Chain (Dukong), and NVNM L2 Testnet.
+</Note>
+
+To install MetaMask, refer to the [official installation guide](https://support.metamask.io/start/getting-started-with-metamask/).
+
+<Steps>
+  <Step title="Add the NVNM Testnet Network">
+    Open MetaMask and select the network dropdown (top-right corner) to add a custom network with the following details:
+
+    | Parameter | Value |
+    | --- | --- |
+    | Network Name | `NVNM Testnet` |
+    | RPC URL | `https://testnet.nvnmchain.io` |
+    | Chain ID (EVM) | `5887` |
+    | Currency Symbol | `NVNM` |
+    | Block Explorer URL | `https://explorer.testnet.nvnmchain.io` |
+
+    <Frame>
+      <img src="/images/connect-testnet/metamask-add-network.png" alt="MetaMask Add Custom Network" />
+    </Frame>
+  </Step>
+
+  <Step title="Verify Your Connection">
+    Switch to the **MANTRA-Dukong** network and you should see your native MANTRA token balance.
+
+    <Frame>
+      <img src="/images/connect-testnet/metamask-dukong-balance.png" alt="MetaMask Dukong Balance" />
+    </Frame>
+  </Step>
+</Steps>
+
+---
+
+## Keplr Setup
+
+<Steps>
+  <Step title="Install Keplr Wallet">
+    Navigate to [https://keplr.app/](https://keplr.app/) and install the Keplr Wallet extension compatible with your browser. Keplr Wallet is essential for managing your crypto assets on the Cosmos ecosystem.
+
+    <Frame>
+      <img src="/images/connect-testnet/keplr-install.png" alt="Keplr Wallet Installation" />
+    </Frame>
+  </Step>
+
+  <Step title="Set Up Keplr Wallet">
+    Add a wallet name, set up a password, and secure your seed phrase or recovery phrase.
+
+    <Warning>
+      **Never** share your recovery phrase with anyone.
+    </Warning>
+
+    <Frame>
+      <img src="/images/connect-testnet/keplr-setup.png" alt="Keplr Wallet Setup" />
+    </Frame>
+  </Step>
+
+  <Step title="Add NVNM Chain to Keplr Wallet">
+    Integrate the NVNM Testnet into your Keplr Wallet:
+
+    1. Click the **menu** button in Keplr
+    2. Search for `nvnm testnet`
+    3. Select **NVNM Testnet**
+
+    <Frame>
+      <img src="/images/connect-testnet/keplr-add-nvnm-testnet.png" alt="Keplr Add NVNM Testnet" />
+    </Frame>
+
+    Click **Save** to confirm the integration.
+  </Step>
+</Steps>
