@@ -1,0 +1,35 @@
+---
+title: "Getting Started"
+description: "Get started as a governator/validator on NVNM Chain, alongside its parent L1 MANTRA Chain."
+icon: "rocket"
+---
+
+The way MANTRA Chain and the Cosmos ecosystem as a whole was designed is that to deploy/govern an L2, the L2 must also run corresponding nodes on the L1. You must first run a validator in the provider L1 chain.
+
+First let's review the node infrastructure pre-requisites. These are applicable for both running a validator on MANTRA Chain and running the leaner governator node on NVNM Chain. The binaries can also run on a single machine if preferred. After that, we will walk through the steps to set up your node and become a validator on MANTRA Chain, which will allow you to then set up your NVNM Chain node and become a validator on NVNM Chain.
+
+<Steps>
+  <Step title="System Requirements">
+    Ensure your system meets these minimum requirements:
+
+    - **CPU**: 4+ cores (≥3.5 GHz recommended for validators)
+    - **RAM**: 16GB minimum (32GB recommended for validators)
+    - **Storage**: 500GB+ SSD, 5000+ IOPS (2TB+ NVMe recommended for validators)
+    - **Network**: 25+ Mbps (100+ Mbps recommended for validators)
+
+    <Note>
+      Bare metal servers are recommended over cloud VMs for optimal performance. See [Chain Parameters](/resources/chain-parameters#system-requirements) for detailed requirements.
+    </Note>
+  </Step>
+  <Step title="Set Up Your Node">
+    Follow our [Running a Node](/operators/node-setup-and-deployment/validator-nodes/running-a-node) guide to set up your MANTRA Chain full node.
+  </Step>
+  <Step title="Choose Your Role">
+    Operators can run various infrastructure components:
+
+    - **Validators**: [Become a Validator](/operators/node-setup-and-deployment/validator-nodes/becoming-a-validator) to join the active set
+    - **Oracles**: [Set up Oracle](/operators/node-setup-and-deployment/validator-nodes/oracle-setup) to provide price feeds
+    - **For Relayers**: IBC and ICQ relayer documentation coming soon
+  </Step>
+</Steps>
+

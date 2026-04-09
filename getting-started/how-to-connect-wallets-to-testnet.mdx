@@ -8,7 +8,7 @@ This guide walks you through connecting MetaMask and Keplr wallets to the NVNM L
 ## MetaMask Setup
 
 <Note>
-  MetaMask is currently the recommended wallet as it can correctly render balances for both EVM, NVNM's Parent L1: MANTRA Chain (Dukong), and NVNM L2 Testnet.
+  MetaMask is currently the recommended wallet as it can correctly render balances for both EVM on both NVNM Chain and NVNM's Parent L1: MANTRA Chain.
 </Note>
 
 To install MetaMask, refer to the [official installation guide](https://support.metamask.io/start/getting-started-with-metamask/).
@@ -20,22 +20,22 @@ To install MetaMask, refer to the [official installation guide](https://support.
     | Parameter | Value |
     | --- | --- |
     | Network Name | `NVNM Testnet` |
-    | RPC URL | `https://testnet.nvnmchain.io` |
-    | Chain ID (EVM) | `5887` |
+    | RPC URL | `https://evm.testnet.nvnmchain.io` |
+    | Chain ID (EVM) | `787111` |
     | Currency Symbol | `NVNM` |
-    | Block Explorer URL | `https://explorer.testnet.nvnmchain.io` |
+    | EVM Block Explorer URL | `https://explorer.evm.testnet.nvnmchain.io` |
 
     <Frame>
-      <img src="/images/connect-testnet/metamask-add-network.png" alt="MetaMask Add Custom Network" />
+      <img src="/images/connect-testnet/metamask-network-settings.png" alt="MetaMask Network Settings" />
+    </Frame>
+    <Frame>
+      <img src="/images/connect-testnet/metamask-add-network.png" alt="MetaMask Add Network" />
     </Frame>
   </Step>
 
   <Step title="Verify Your Connection">
-    Switch to the **MANTRA-Dukong** network and you should see your native MANTRA token balance.
-
-    <Frame>
-      <img src="/images/connect-testnet/metamask-dukong-balance.png" alt="MetaMask Dukong Balance" />
-    </Frame>
+    Switch to the **NVNM Testnet** network and you should see balances on the network, this will primarily be the native gas token for NVNM Chain: MANTRA USD.
+    // Todo: Add image of MetaMask showing MANTRA USD balance on NVNM Testnet
   </Step>
 </Steps>
 

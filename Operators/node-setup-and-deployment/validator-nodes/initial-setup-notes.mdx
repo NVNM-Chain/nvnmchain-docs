@@ -1,0 +1,79 @@
+---
+title: "Initial Node Setup Notes"
+description: >-
+  Running your own node provides you various benefits, opens new possibilities,
+  and helps to support the ecosystem. This page will guide you through spinning
+  up your own node and taking part.
+---
+
+# Node Setup & Deployment
+
+We aim to achieve a diversified group of validator nodes and ecosystem infrastructure, allowing us to maintain strong infrastructure Availability, Scalability, Resiliency, and Performance.
+
+In the pages following - we will guide you on recommended deployment configurations and steps in order to ensure properly-functioning full, archive, and validator nodes on NVNM Chain.
+
+# Node System Requirements
+
+## Pre-Requisites
+
+You should understand what a blockchain node is and why you might want to run a client.
+
+## Selecting an Approach
+
+The first step in spinning up your node is choosing your approach. Based on requirements and various possibilities, you must select the environment (hardware, system), and the parameters for client settings.
+
+This page will guide you through these decisions and help you find the most suitable way to run on NVNM Chain.
+
+## Environment and hardware <a href="#environment-and-hardware" id="environment-and-hardware"></a>
+
+### **Local or cloud** <a href="#environment-and-hardware" id="environment-and-hardware"></a>
+
+NVNM Chain, and its parent chain MANTRA, are able to run on consumer grade systems and don't require any special hardware. Therefore, you have various options for deploying the node based on your needs. To simplify, let's think about running a node on both a local physical machine and a cloud server:
+
+* Cloud
+  * Providers offer high server uptime and static public IP addresses
+  * Getting dedicated or virtual server can be more comfortable than building your own
+  * Trade off is trusting a third party - server provider
+  * Because of the ever-increasing requirements for storage and memory, the price of a rented server might get high
+* Own hardware
+  * More trust-less and sovereign approach
+  * One time investment
+  * You have to physically prepare, maintain, and potentially troubleshoot the machine and networking
+
+Both options have different advantages summed up above. If you are looking for a cloud solution, in addition to many traditional cloud computing providers, there are also services focused on deploying nodes. We are working to provide a selection of Nodes-as-a-Service in the future!
+
+## **Hardware**
+
+### **Requirements**
+
+Hardware requirements differ by client but generally are not that high since the node just needs to stay synced. Don't confuse it with mining, which requires much more computing power. Sync time and performance do improve with more powerful hardware however.
+
+Before installing any client, please ensure your computer has enough resources to run it. You can find the minimum and recommended requirements below.
+
+The bottleneck for your hardware is mostly disk space. It is best to have a **solid-state drive (SSD)** or **NVME drive**.
+
+The size of the database and speed of the initial synchronization depends on the age of the chain and the chosen sync strategy.
+
+Also make sure your internet connection is not limited by a [bandwidth cap](https://wikipedia.org/wiki/Data\_cap). It's recommended to use an unmetered connection since initial sync and data broadcasted to the network could exceed your limit.
+
+### **Operating system**
+
+NVNM Chain supports all major operating systems - Linux, MacOS, Windows as well as the two primary architecture to-date: AMD64 (also including Intel x86) and ARM64. Make sure your OS is up to date to avoid potential issues and security vulnerabilities.
+
+#### **Minimum requirements**
+
+* CPU with 4+ cores
+* 16 GB RAM
+* 500GB+ SSD, 5000+ IOPS
+* 25+ Mbps bandwidth
+
+**Recommended specifications (validators)**
+
+* Fast CPU with 4+ cores, ≥3.5 GHz base clock
+* 32 GB RAM
+* 2TB+ NVMe SSD, 10,000+ IOPS
+* 100+ Mbps stable connection
+
+<Note>
+Bare metal servers are recommended over cloud VMs for optimal validator performance.
+</Note>

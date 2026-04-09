@@ -1,0 +1,48 @@
+---
+title: "EVM Precompiles"
+description: "Precompiled contracts available in the NVNM Chain EVM"
+icon: "microchip"
+---
+
+Precompiled contracts (precompiles) are built-in contracts available at fixed addresses that provide functionality beyond what standard EVM opcodes offer. NVNM Chain includes the standard Ethereum precompiles as well as custom precompiles that bridge the EVM with the underlying Cosmos SDK modules.
+
+## NVNM Stateful Precompiles (Cosmos Modules)
+
+These precompiles provide EVM access to Cosmos SDK module functionality. Because they interact with on-chain state, they can read and write data just like a regular smart contract call.
+
+| Precompile | Address | Description |
+| --- | --- | --- |
+| ICS20 (IBC Transfer) | `0x0000000000000000000000000000000000000802` | Send cross-chain IBC token transfers from the EVM |
+| Gov | `0x0000000000000000000000000000000000000805` | Submit and vote on governance proposals |
+| Anchoring | `0x0000000000000000000000000000000000000A00` | The Anchoring Module manages registries and records for anchoring off-chain artifacts (e.g., documents) on-chain. A record typically contains a checksum (hash), a URI, optional metadata, and a status. Records are versioned per checksum within a registry. |
+
+<Accordion title="Additional Precompiles">
+## Standard Ethereum Precompiles
+
+These precompiles are part of the core Ethereum specification and are available on all EVM-compatible chains.
+
+| Precompile | Address | Description |
+| --- | --- | --- |
+| ECRecover | `0x0000000000000000000000000000000000000001` | Recovers the signer address from an ECDSA signature |
+| SHA-256 | `0x0000000000000000000000000000000000000002` | Computes the SHA-256 hash of the input |
+| RIPEMD-160 | `0x0000000000000000000000000000000000000003` | Computes the RIPEMD-160 hash of the input |
+| Identity | `0x0000000000000000000000000000000000000004` | Returns the input data unchanged (used for memory copying) |
+| ModExp (EIP-198) | `0x0000000000000000000000000000000000000005` | Performs modular exponentiation |
+| ECAdd (alt_bn128) | `0x0000000000000000000000000000000000000006` | Performs point addition on the alt_bn128 elliptic curve |
+| ECMul (alt_bn128) | `0x0000000000000000000000000000000000000007` | Performs scalar multiplication on the alt_bn128 elliptic curve |
+| ECPairing (alt_bn128) | `0x0000000000000000000000000000000000000008` | Performs pairing checks on the alt_bn128 elliptic curve |
+| BLAKE2F (EIP-152) | `0x0000000000000000000000000000000000000009` | Executes the BLAKE2b F compression function |
+
+## NVNM Stateless Precompiles
+
+These custom precompiles extend the EVM with additional cryptographic and address-conversion utilities. They do not modify chain state.
+
+| Precompile | Address | Description |
+| --- | --- | --- |
+| P256 | `0x0000000000000000000000000000000000000100` | Verifies P-256 (secp256r1) elliptic curve signatures |
+| Bech32 | `0x0000000000000000000000000000000000000400` | Converts between hex and Bech32 address formats |
+</Accordion>
+
+<Info>
+For details on how to interact with the Cosmos module precompiles from Solidity, see the [Using Precompiles](/developers/evm/using-precompiles) guide.
+</Info>

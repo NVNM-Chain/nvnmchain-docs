@@ -1,0 +1,181 @@
+---
+title: "Upgrading L1 Node to Validator"
+description: "Once the nodes are online and sync'ed - we can convert the existing node on the MANTRA L1 Provider Chain into a Validator Node and allow for Consumer Chain 'opt-in'."
+---
+
+<Note>
+Before creating a validator, ensure you have first followed the instructions on how to [Setup & Run a Node](/operators/node-setup-and-deployment/validator-nodes/running-a-node). 
+</Note>
+
+<Tip>
+For additional context around Validator Setup on MANTRA Chain, please refer to the [Cosmos SDK Validator Architecture Documentation](https://docs.cosmos.network/enterprise/components/poa/architecture#validator-registration) and the [MANTRA Chain Validator Setup Guide](https://docs.mantrachain.io/operators/node-setup-and-deployment/validator-nodes/becoming-a-validator).
+</Tip>
+
+<Steps>
+  <Step>
+  **Validator Standard Setup: MANTRA Chain L1**
+
+  Ensure you have a small amount of MANTRA on the wallet address you are using on your keyring in order to successfully send a transaction. Once you have have a balance on the address on your keyring, you can now send the `create-validator` transaction.
+  
+```bash
+CHAIN_ID=mantra-dukong-1
+MANTRA_RPC_ENDPOINT=https://rpc.dukong.mantrachain.io:443
+
+MANTRACHAIN_CONSENSUS_PUBKEY=$(mantrachaind tendermint show-validator)
+cat > validator.json <<EOF
+{
+  "pubkey": $MANTRACHAIN_CONSENSUS_PUBKEY,
+  "amount": "10000000000000uom",
+  "moniker": "<e.g. Validator for MANTRA Chain>",
+  "identity": "<can be empty or use keybase identity>",
+  "website": "<WEBSITE_URL>",
+  "security": "<SECURITY_CONTACT>",
+  "details": "<VALIDATOR_OPERATOR_DESCRIPTION>",
+  "commission-rate": "0.1",
+  "commission-max-rate": "0.2",
+  "commission-max-change-rate": "0.01",
+  "min-self-delegation": "1"
+}
+EOF
+mantrachaind tx staking create-validator validator.json --from $KEY_NAME --chain-id $CHAIN_ID --gas="auto" --gas-adjustment 1.4 --gas-prices="40000000000amantra" --node $MANTRA_RPC_ENDPOINT
+``` 
+
+<Note>
+When you run the standard mantrachaind init or nvnmchaind init command, it creates a default consensus key on disk at path `$HOME/.mantrachaind/config/priv_validator_key.json` 
+
+This is sufficient for testnet, for which the security requirements are low.
+</Note>
+  </Step>
+
+  <Step>
+  **Configure Opt-In and Connect the Consumer L2 Node**
+
+  Setting up the opt-in is required to run NVNM Chain L2 Consumer.
+
+  <Danger>
+  Make sure `$NVNMCHAIN_CONSENSUS_PUBKEY` returns the validator consensus pubkey you expect. If you omit the `$NVNM_CONSENSUS_PUBKEY` argument, the consumer chain will use the same consensus pubkey as the provider chain that you are running for the validator. 
+  
+  That is, you will need to run the consumer chain validator with the same validator key as the provider chain (aka `$MANTRACHAIN_CONSENSUS_PUBKEY`). This is **NOT** recommended.
+</Danger>
+
+```bash
+CHAIN_ID=mantra-dukong-1
+MANTRA_RPC_ENDPOINT=https://rpc.dukong.mantrachain.io:443
+
+# there is only one consumer chain right now; this is NVNM Chain
+# if there are multiple consumer chains in the future, this will be the ID of the consumer chain you want to connect to
+CONSUMER_ID=0 
+NVNM_CONSENSUS_PUBKEY=$(nvnmchaind cometbft show-validator)
+
+mantrachaind tx provider opt-in $CONSUMER_ID $NVNM_CONSENSUS_PUBKEY --from $KEY_NAME --chain-id $CHAIN_ID --gas="auto" --gas-adjustment 1.4 --gas-prices="40000000000amantra" --node $MANTRA_RPC_ENDPOINT
+```
+
+  </Step>
+  <Step>
+  **🚀 Validate Results!**
+
+  Check that the validator is live on NVNM Chain
+  
+  The new validator should appear in the validator set of NVNM chain as long as the VSCPacket with the new validator set is relayed to the consumer chain via IBC.
+
+  You can check the validator set by running:
+  ```bash
+  nvnmchaind q comet-validator-set --node "https://rpc.testnet.nvnmchain.io:443"
+  ```
+
+  If everything is set up correctly, you should see your validator in the list.
+
+  </Step>
+</Steps>
+
+
+
+
+
+## Initialize Wallet Keyring <a href="#initialize-wallet-keyring" id="initialize-wallet-keyring" />
+
+If you decide you want to turn your node into a validator, you will first need to add a wallet to your keyring.
+
+While you can add an existing wallet through a seed phrase or importing a private key, the example shows how to create a new wallet (replace `$KEY_NAME` with a name of your choosing):
+
+```bash
+mantrachaind keys add $KEY_NAME
+```
+
+The above command will produce the following output:
+
+```
+- address: mantra1q55nrzygas0nespfu8mwt2yntq8gxll3kyug82
+  name: validator-mchain-test-node-keys
+  pubkey: '{"@type":"/cosmos.crypto.secp256k1.PubKey","key":"A/YebpAX8AqUNcNXcqIy53fJo8BGFCSaQA5A0XQWMlCG"}'
+  type: local
+	
+**Important** write this mnemonic phrase in a safe place.
+It is the only way to recover your account if you ever forget your password.
+	
+expect kid unfair uniform calm debris meadow despair vintage arrive walnut vast upset cart step funny truth vault naive note capable spray shine human
+```
+
+Ensure you write down the mnemonic as you can not recover the wallet without it. To ensure your wallet was saved to your keyring, you can verify that the wallet is listed by using the following command:
+
+```bash
+mantrachaind keys list
+```
+
+### **Import keys**
+
+Alternatively, if you already have an existing mnemonic that you'd like to use, then run the following:
+
+```bash
+mantrachaind keys add $KEY_NAME --recover
+```
+
+**KEEP THE MNEMONIC PHRASE IN A SAFE PLACE!**
+
+### View Validator Public Key <a href="#validator-public-key" id="validator-public-key" />
+
+The last thing needed before initialising the validator is to obtain your validator public key which was created when you first initialized your node. To obtain your validator pubkey:
+
+```
+mantrachaind tendermint show-validator
+```
+
+## Create Validator Command <a href="#create-validator-command" id="create-validator-command" />
+
+Ensure you have a small amount of MANTRA on the wallet address you are using on your keyring in order to successfully send a transaction. Once you have have a balance on the address on your keyring, you can now send the `create-validator` transaction.
+
+Here is the same command but with example values and an example of how certain parameters can be loaded from an external file, i.e. `validator.json`:
+
+```bash
+
+echo "{
+	\"pubkey\": $(mantrachaind tendermint show-validator),
+	\"amount\": \"10000000000000000000000amantra\",
+	\"moniker\": \"MANTRA Chain Foundation\",
+	\"identity\": \"xxxxxx\",
+	\"website\": \"https://mantrachain.io\",
+	\"security\": \"security@mantrachain.io\",
+	\"details\": \"MANTRA is a purpose-built RWA Layer 1 Blockchain, capable of adherence to real world regulatory requirements.\",
+	\"commission-rate\": \"0.1\",
+	\"commission-max-rate\": \"0.2\",
+	\"commission-max-change-rate\": \"0.01\",
+	\"min-self-delegation\": \"1\"
+}
+" > validator.json
+
+mantrachaind tx staking create-validator validator.json --from $KEY_NAME --chain-id mantra-dukong-1 --gas="auto" --gas-adjustment 2 --gas-prices="40000000000amantra"
+```
+
+If you need further explanation for each of these command flags:
+
+- the `from` flag is the `$KEY_NAME` you created when initialising the key on your keyring
+- the `amount` flag is the amount you will place in your own validator in `amantra`
+- the `pubkey` is the validator public key found earlier
+- the `moniker` is a human readable name you choose for your validator
+- the `security-contact` is an email your delegates are able to contact you at
+- the `chain-id` is the active chain with to which you will connect (i.e. `mantra-1` for mainnet, `mantra-dukong-1` for public testnet.)
+- the `commission-rate` is the rate you will charge your delegates for the privilege of running the validator on their behalf
+- the `commission-max-rate` is the most you are allowed to charge your delegates
+- the `commission-max-change-rate` is how much you can increase your commission rate in a 24 hour period
+- the `min-self-delegation` is the lowest amount of personal funds the validator is required to have in their own validator to stay bonded
+- the `gas-prices` is the amount of gas used to send this `create-validator` transaction

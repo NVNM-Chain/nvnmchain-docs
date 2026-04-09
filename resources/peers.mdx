@@ -1,0 +1,98 @@
+---
+title: "Peers"
+description: "Seed nodes and persistent peers for connecting to MANTRA and NVNM Chain networks"
+icon: "link"
+---
+
+This page lists peer information for connecting to MANTRA and NVNM Chain networks.
+
+<Tabs>
+  <Tab title="NVNM Chain L2: Testnet">
+    ## Testnet (nvnm-testnet-1)
+
+    ### Seed Nodes
+
+    ```
+    xxx
+    ```
+
+    ### Additional P2P Peers
+
+    ## Configuration
+
+    To add these peers to your node configuration:
+
+    1. Edit your `config.toml` file:
+
+    ```bash
+    nano ~/.nvnmchain/config/config.toml
+    ```
+
+    2. Add the seed nodes:
+
+    ```toml
+    # Comma separated list of seed nodes to connect to
+    seeds = ""
+    ```
+
+    3. Optionally, add some persistent peers:
+
+    ```toml
+    # Comma separated list of nodes to keep persistent connections to
+    persistent_peers = ""
+    ```
+
+    ## Addrbook
+
+    You can also bootstrap your node with a pre-existing addrbook:
+
+    ```bash
+    wget -O ~/.nvnmchain/config/addrbook.json https://raw.githubusercontent.com/MANTRA-Chain/net-nvnmchain/main/nvnm-testnet-1/addrbook.json
+    ```
+  </Tab>
+  <Tab title="MANTRA Chain L1: DuKong Testnet">
+    ## Testnet (mantra-dukong-1)
+
+    ### Seed Nodes
+
+    ```
+    7e061edecef73a700b699c785f61a44ca981ff7f@seed0.dukong.mantrachain.io:26656
+    ```
+
+    ### Additional P2P Peers
+
+    ## Configuration
+
+    To add these peers to your node configuration:
+
+    1. Edit your `config.toml` file:
+
+    ```bash
+    nano ~/.mantrachain/config/config.toml
+    ```
+
+    2. Add the seed nodes:
+
+    ```toml
+    # Comma separated list of seed nodes to connect to
+    seeds = ""
+    ```
+
+    3. Optionally, add some persistent peers:
+
+    ```toml
+    # Comma separated list of nodes to keep persistent connections to
+    persistent_peers = ""
+    ```
+
+    ## Addrbook
+
+    You can also bootstrap your node with a pre-existing addrbook:
+
+    ```bash
+    wget -O ~/.mantrachain/config/addrbook.json https://raw.githubusercontent.com/MANTRA-Chain/net/main/mantra-dukong-1/addrbook.json
+    ```
+  </Tab>
+</Tabs>
+
+### 

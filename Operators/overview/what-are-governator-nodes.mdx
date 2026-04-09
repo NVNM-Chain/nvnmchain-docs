@@ -1,0 +1,33 @@
+---
+title: "What are Validator Nodes?"
+description: >-
+  Overview on how Validator Nodes and Delegated Proof-of-Stake works on MANTRA
+  Chain
+icon: "badge-check"
+---
+
+# Validators & DPoS
+
+MANTRA Chain relies on a team of validators who are tasked with adding new blocks to the blockchain. Here's how the process works and some critical details about its structure:
+
+**Validators and Consensus Protocol:** Validators play a key role in the consensus protocol by casting votes, which include cryptographic signatures from their private keys. They are essentially responsible for confirming the transactions.
+
+**Bonding and Delegating Network Tokens:** Potential validators can bond their own tokens. Others can also stake, or 'delegate,' their tokens to these candidates. The validators are chosen based on the total number of tokens delegated to them.
+
+**Earning Tokens and Transaction Fees:** Both validators and their delegators earn tokens through block provisions and tokens through transaction fees. This is achieved by executing the Tendermint consensus protocol. Validators can even set a commission percentage on the fees to incentivize their delegators.
+
+**Overview of Validators:** You can find details about all current validators and their voting power on Mintscan.
+
+**Penalties for Misconduct:** If validators act inappropriately (e.g., double-signing or being offline too long), they and their delegators can face penalties. The severity of the penalty depends on the violation's seriousness.
+
+**Defending Against Attacks:** Validators are charged with protecting the network against denial-of-service attacks. A recommended strategy is to use a 'sentry node architecture.'
+
+**Sentry Node Architecture Explained:**
+
+* Validator nodes should only connect to trusted full-nodes.
+* Typically, a validator node will run in a data centre, which often has direct links to major cloud providers.
+* Validators can use these links to connect to sentry nodes in the cloud, shifting the burden of attacks to the sentry nodes.
+* Sentry nodes can be quickly adjusted or created to fend off attacks.
+* The links to the sentry nodes are in private IP space, protecting them from internet-based disturbances.
+
+By using this architecture, validator block proposals and votes are ensured to reach the rest of the network, maintaining the stability and integrity of MANTRA Chain.

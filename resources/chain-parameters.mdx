@@ -1,0 +1,66 @@
+---
+title: "Chain Parameters"
+description: "MANTRA Chain parameters and configurations"
+icon: "gears"
+---
+
+## Token Denominations
+
+<Info>
+**Understanding Denoms:**
+
+As of the moment, NVNM Chain has **NOT** launched with a native token. The chain operates using a wrapped mantraUSD token, which is used for transaction fees and other on-chain activities. The wrapped mantraUSD token is represented by the `wmantraUSD` denomination.
+</Info>
+
+<Tabs>
+  <Tab title="NVNM Chain L2: Testnet">
+    Below are the current parameters for the `nvnm-testnet-1` testnet chain:
+
+    | Name               | Value                       |
+    | ------------------ | --------------------------- |
+    | chain-id           | `nvnm-testnet-1`           |
+    | denom              | `wmantraUSD`                   |
+    | minimum-gas-prices | ``        |
+    | timeout_commit     | `3s`                        |
+    | genesis_time       | `` |
+
+    ## Binary Information
+
+    The testnet is running the latest release candidate and is used for testing prior to mainnet upgrades.
+
+    The release binary information is provided below:
+
+    | Item           | Description                                                             |
+    | :------------- | :---------------------------------------------------------------------- |
+    | GitHub repo    | [MANTRA-Chain/nvnmchain](https://github.com/MANTRA-Chain/nvnmchain) |
+    | Latest release | [v1.0.0-rc7]                                                            |
+
+    ## Genesis File
+
+    The genesis file information is provided below:
+
+    | Item    | Description                                                                                                     |
+    | :------ | :-------------------------------------------------------------------------------------------------------------- |
+    | Genesis | [genesis.json](https://raw.githubusercontent.com/MANTRA-Chain/net-nvnmchain/refs/heads/main/nvnm-testnet-1/genesis.json) |
+  </Tab>
+</Tabs>
+
+## System Requirements
+
+### Minimum Requirements
+
+| Component | Specification |
+|-----------|--------------|
+| CPU | 4+ cores |
+| RAM | 16 GB |
+| Storage | 500GB+ SSD, 5000+ IOPS |
+| Network | 25+ Mbps |
+| OS | Ubuntu 20.04+ or macOS |
+
+<Note>
+Bare metal servers are recommended over cloud VMs for optimal validator performance.
+</Note>
+
+### Building from Source
+
+- Go 1.23.x required for building from source

@@ -1,0 +1,99 @@
+---
+title: Configure `systemd` Services
+description: >-
+  `systemd` is a system and service manager for Linux operating systems that
+  serves as the init system for initialising user space and managing system
+  processes.
+---
+
+# Configuring Mantrachain with `systemd`
+
+The best way to run `mantrachaind` and `nvnmchaind` is as a daemon service that also leverages Cosmovisor. [Cosmovisor](https://docs.cosmos.network/main/build/tooling/cosmovisor#installation) is a tool designed for managing and upgrading Cosmos SDK-based blockchain nodes. It simplifies the process of running a validator or full node by handling automatic upgrades and minimizing downtime.
+
+<Note>
+One great advantage of using Cosmovisor is its automated upgrade process. It polls an `upgrade-info.json` file that is created by the x/upgrade module at upgrade height, and then can automatically download the new binary, stop the current binary, switch from the old binary to the new one, and finally restart the node with the new binary.
+</Note>
+
+
+## Pre-Requisites
+
+### Go Requirement <a href="#go-requirement" id="go-requirement"></a>
+
+You will need to be running, at minimum, go `1.20` to run Cosmovisor.&#x20;
+
+```bash
+wget -q -O - https://git.io/vQhTU | bash -s -- --remove
+wget -q -O - https://git.io/vQhTU | bash -s -- --version 1.20
+```
+
+## Set Up Cosmovisor
+
+Set up cosmovisor to ensure any future upgrades happen flawlessly. To install Cosmovisor:
+
+```
+go install cosmossdk.io/tools/cosmovisor/cmd/cosmovisor@latest
+```
+
+(You may also refer to the Cosmovisor [installation instructions](https://github.com/cosmos/cosmos-sdk/tree/main/tools/cosmovisor#installation).)
+
+<Tip>
+The following instructions below are applicable for both `mantrachaind` and `nvnmchaind` binaries. Just make sure to replace the binary name and paths accordingly.
+</Tip>
+
+Create the required directories:
+
+```
+mkdir -p ~/.mantrachaind/cosmovisor
+mkdir -p ~/.mantrachaind/cosmovisor/genesis
+mkdir -p ~/.mantrachaind/cosmovisor/genesis/bin
+mkdir -p ~/.mantrachaind/cosmovisor/upgrades
+```
+
+## Configure `mantrachaind` as a Service
+
+The `systemd` service manager allows the `mantrachaind` binary to run as a service, instead of as a command-line application. (See [https://systemd.io](https://systemd.io) for more information.)
+
+```bash
+sudo tee /etc/systemd/system/mantrachaind.service > /dev/null << EOF
+[Unit]
+Description=Mantrachaind Service
+After=network-online.target
+[Service]
+User=$USER
+ExecStart=$(which cosmovisor) run start
+Restart=on-failure
+RestartSec=3
+LimitNOFILE=10000
+Environment="DAEMON_NAME=mantrachaind"
+Environment="DAEMON_HOME=$HOME/.mantrachain"
+Environment="DAEMON_ALLOW_DOWNLOAD_BINARIES=true"
+Environment="DAEMON_RESTART_AFTER_UPGRADE=true"
+Environment="UNSAFE_SKIP_BACKUP=true"
+[Install]
+WantedBy=multi-user.target
+EOF
+```
+
+### Starting, Stopping and Restarting `mantrachaind`
+
+```bash
+# Reload daemon inventory, Enable the new Service and Start
+sudo systemctl daemon-reload
+sudo systemctl enable mantrachaind
+sudo systemctl start mantrachaind
+
+
+# Stop Service
+sudo systemctl stop mantrachaind
+
+# Restart
+sudo systemctl restart mantrachaind
+
+# Logging
+sudo journalctl -xefu mantrachaind
+
+# Logging - filtered on block height lines
+sudo journalctl -xefu mantrachaind -g ".*txindex"
+```
+
+You can use the `journalctl` command to check on the node's progress.

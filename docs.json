@@ -18,8 +18,7 @@
             "group": "NVNM Chain",
             "pages": [
               "index",
-              "/getting-started/how-to-connect-wallets-to-testnet",
-              "development"
+              "/getting-started/how-to-connect-wallets-to-testnet"
             ]
           }
         ]
@@ -42,14 +41,10 @@
             "expanded": false,
             "icon": "gears",
             "pages": [
-              "operators/node-setup-and-deployment/validator-nodes/initial-setup",
+              "operators/node-setup-and-deployment/validator-nodes/initial-setup-notes",
               "operators/node-setup-and-deployment/validator-nodes/running-a-node",
-              "operators/node-setup-and-deployment/validator-nodes/configuring-mantrachain",
-              "operators/node-setup-and-deployment/validator-nodes/connect-sidecar",
               "operators/node-setup-and-deployment/validator-nodes/becoming-a-validator",
-              "operators/node-setup-and-deployment/validator-nodes/secure-validator",
-              "operators/node-setup-and-deployment/validator-nodes/oracle-setup",
-              "operators/node-setup-and-deployment/validator-nodes/download-nodes-snapshots"
+              "operators/node-setup-and-deployment/validator-nodes/configuring-systemd-service"
             ]
           }
         ]
@@ -66,9 +61,7 @@
               "resources/network-details",
               "resources/chain-parameters",
               "resources/evm-precompiles",
-              "resources/peers",
-              "resources/chain-registry",
-              "resources/safe-multisig"
+              "resources/peers"
             ]
           }
         ]

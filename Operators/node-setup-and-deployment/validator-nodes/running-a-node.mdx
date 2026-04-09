@@ -1,0 +1,177 @@
+---
+title: "Node Quickstart"
+description: >-
+  Validator Opt-in Runbook: MANTRA L1 Provider Chain + NVNM Chain L2 Consumer Chain Node Setup & Deployment Guide
+---
+
+Recommended Readings
+
+- [Anatomy of a Cosmos SDK Application](https://docs.cosmos.network/main/learn/beginner/app-anatomy)
+- [Setting up a keyring](https://docs.cosmos.network/main/user/run-node/keyring)
+
+# Pre-Requisites:
+
+First, you need to download the latest releases of both MANTRA Chain and NVNM Chain binaries, and make sure you have the necessary hardware to run the nodes. Please refer to the [Initial Node Setup Notes](/operators/node-setup-and-deployment/validator-nodes/initial-setup-notes) for more details on these pre-requisites.
+
+## Download latest release <a href="#download-latest-release" id="download-latest-release" />
+
+Latest chain release binaries can be found on Github.
+
+| Chain    | Github URL                            |
+| -------- | ------------------------------------- |
+| MANTRA Chain     | https://github.com/MANTRA-Chain/mantrachain/releases                     |
+| NVNM Chain       | https://github.com/NVNM-Chain/nvnmchain/releases                     |
+
+<Note>
+You can download the `mantrachaind` and `nvnmchaind` executables and place them in a standard binary folder, such as `/usr/local/bin/` or similar. Remember to make them executable by running `sudo chmod +x mantrachaind` and `sudo chmod +x nvnmchaind`.
+</Note>
+
+### Binary Check
+
+Each `mantrachaind` and `nvnmchaind` binary is deployed with a corresponding `.sha256` file that you can download, to verify the integrity of the build. Download the `sha256sum.txt` and verify the hash.
+
+<Note>
+**Build from Source**
+
+If you would like to build from source instead of using the release binary, you can compile and install the binary.
+
+[go](https://go.dev/dl/) will be needed for this install
+
+```bash
+make install
+```
+</Note>
+
+# Initialize MANTRA Chain L1 Node
+
+The way MANTRA Chain / cosmos-sdk was designed is that to deploy an L2, the L2 must also run nodes on the L1. You must first run a validator in the provider L1 chain. To pre-configure the chain, you can trigger the `init` subcommand:
+
+<Tip>
+  #### Public Testnet/Mainnet Chains
+  
+  Currently only **Public Testnet** chain is available for NVNM Chain: `nvnm-testnet-1` and its parent L1 `mantra-dukong-1`. 
+  
+  We will have regularly updating public testnet chains along with the mainnet chains: `mantra-1` and `nvnm-1`. Available networks to integrate with along with their requisite genesis files can be found here: 
+  - [MANTRA Chain](https://github.com/MANTRA-Chain/net)
+  - [NVNM Chain](https://github.com/MANTRA-Chain/net-nvnmchain)
+</Tip>
+
+<Steps>
+  <Step title="(Optional) Start from an existing snapshot">
+When the node starts, it needs to sync all the data from other nodes, which could be time-consuming.
+In order to expedite the process, we are providing some existing data snapshots at [here](https://docs.mantrachain.io/operators/node-setup-and-deployment/validator-nodes/download-nodes-snapshots).
+
+<Warning>
+If you are starting the node, please follow the procedure here in order to stop the current service and backup the important data: https://www.polkachu.com/tendermint_snapshots/mantra
+</Warning>
+
+  </Step>
+  <Step title="Initialize MANTRA Chain Node">
+    Run the following command to initialize your MANTRA Chain node (configured for _testnet_):
+```
+mantrachaind init <moniker> --chain-id mantra-dukong-1
+
+CONFIG_TOML="$HOME/.mantrachain/config/config.toml"
+APP_TOML="$HOME/.mantrachain/config/app.toml"
+PERSISTENT_PEERS="" # Can be empty. Fill this one if you need to connect to particular peers
+SEEDS="7e061edecef73a700b699c785f61a44ca981ff7f@34.150.103.79:26656,8542cd7e6bf9d260fef543bc49e59be5a3fa9074@seed.publicnode.com:26656"
+sed -i.bak -e "s/^minimum-gas-prices *=.*/minimum-gas-prices = \"40000000000amantra\"/g" $APP_TOML
+sed -i.bak -e "s/^persistent_peers *=.*/persistent_peers = \"$PERSISTENT_PEERS\"/" $CONFIG_TOML
+sed -i.bak -e "s/^seeds =.*/seeds = \"$SEEDS\"/" $CONFIG_TOML
+external_address=$(wget -qO- eth0.me)
+sed -i.bak -e "s/^external_address *=.*/external_address = \"$external_address:26656\"/" $CONFIG_TOML
+```
+
+<Tip>
+The seeds format is `node-id@ip:port,node-id@ip:port,...`
+More seeds/peers can be found at [Github](https://github.com/cosmos/chain-registry/blob/master/mantrachain/chain.json)
+</Tip>
+
+Arguments:
+
+- `moniker`: the custom username of your node, it should be human-readable.
+- `chain-id`: The id of an existing chain that you want to join. Examples:
+  - Testnet: `mantra-dukong-1`
+  - Mainnet: `mantra-1`
+
+The command above creates all the configuration files needed for your node to run, as well as a default genesis file, which defines the initial state of the network. Reminder to overwrite the default genesis if you're planning to exist to an existing chain!!
+
+<Note>
+  All these configuration files are in `~/.mantrachain` by default, but you can overwrite the location of this folder by passing the `--home` flag to each commands, or set an `$APPD_HOME` environment variable (where `APPD` is the name of the binary).
+
+  The `~/.mantrachain` folder has the following structure:
+
+  - `config.toml`: used to configure the CometBFT, learn more on [CometBFT's documentation](https://docs.cometbft.com/v0.37/core/configuration),
+  - `app.toml`: generated by the Cosmos SDK, and used to configure your app, such as state pruning strategies, telemetry, gRPC and REST servers configuration, state sync...
+
+  Both files are heavily commented, please refer to them directly to tweak your node.
+</Note>
+
+  </Step>
+  <Step title="Genesis File and Configuration">
+```bash
+curl -s https://rpc.dukong.mantrachain.io/genesis | jq -r .result.genesis > $HOME/.mantrachain/config/genesis.json
+```
+  </Step>
+
+  <Step title="Testing the setup: Start `mantrachaind`">
+```bash
+mantrachaind start
+```
+
+Wait for a few couple of seconds, and if you see the height growing: **success!** 🎉
+  </Step>
+</Steps>
+
+# Initialize NVNM Chain L2 Node
+
+Inveniam node management and deployment, specs and configuration, match a standard cosmos-sdk L1 node deployment; little needs to be changed - while they can run on the same machine, for security purposes (especially Mainnet) - they should be run on separate machines.
+
+<Steps>
+  <Step title="Initialize NVNM Chain Node">
+    Run the following command to initialize your NVNM Chain node (configured for _testnet_):
+```
+nvnmchaind init <moniker> --chain-id nvnm-testnet-1
+
+CONFIG_TOML="$HOME/.nvnmchain/config/config.toml"
+APP_TOML="$HOME/.nvnmchain/config/app.toml"
+PERSISTENT_PEERS="" # Can be empty. Fill this one if you need to connect to particular peers
+SEEDS="7e061edecef73a700b699c785f61a44ca981ff7f@34.150.103.79:26656"
+sed -i.bak -e "s/^minimum-gas-prices *=.*/minimum-gas-prices = \"0.01uom\"/g" $APP_TOML
+sed -i.bak -e "s/^persistent_peers *=.*/persistent_peers = \"$PERSISTENT_PEERS\"/" $CONFIG_TOML
+sed -i.bak -e "s/^seeds =.*/seeds = \"$SEEDS\"/" $CONFIG_TOML
+external_address=$(wget -qO- eth0.me)
+sed -i.bak -e "s/^external_address *=.*/external_address = \"$external_address:26656\"/" $CONFIG_TOML
+```
+
+<Tip>
+More seeds/peers can be found at [Github](https://github.com/cosmos/chain-registry/blob/master/nvnmchain/chain.json)
+</Tip>
+
+Arguments:
+
+- `moniker`: the custom username of your node, it should be human-readable.
+- `chain-id`: The id of an existing chain that you want to join. Examples:
+  - Testnet: `nvnm-testnet-1`
+  - Mainnet: `nvnm-1`
+
+
+</Step>
+  <Step title="Genesis File and Configuration">
+```bash
+curl -s https://rpc.testnet.nvnmchain.io/genesis | jq -r .result.genesis > $HOME/.nvnmchain/config/genesis.json
+```
+  </Step>
+
+  <Step title="Testing the setup: Start `nvnmchaind`">
+```bash
+nvnmchaind start
+```
+
+Wait for a few couple of seconds, and if you see the height growing: **success!** 🎉
+  </Step>
+</Steps>
+
+## Client Interaction[​](https://docs.cosmos.network/main/user/run-node/run-node#client-interaction) <a href="#client-interaction" id="client-interaction" />
+
+When instantiating a node, GRPC and REST are defaulted to localhost to avoid unknown exposure of your node to the public. It is recommended to not expose these endpoints without a proxy that can handle load balancing or authentication is setup between your node and the public.
