@@ -8,6 +8,10 @@
     "dark": "#15803D"
   },
   "favicon": "/favicon.svg",
+  "banner": {
+      "content": "⚠️ NVNM Chain Testnet `nvnm-testnet-1` Genesis is **IN PROGRESS**. Endpoints and services may be unstable or unusable until genesis is complete. Keep an eye out here for updates! ⚠️",
+      "dismissible": false
+    },
   "navigation": {
     "tabs": [
       {
