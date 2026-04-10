@@ -1,6 +1,6 @@
 {
   "$schema": "https://mintlify.com/docs.json",
-  "theme": "willow",
+  "theme": "mint",
   "name": "inveniam-docs-v2",
   "colors": {
     "primary": "#0055FF",
