@@ -17,6 +17,7 @@
   },
   "env": {
     "prod": {
+      "name": "nvnmchain-docs-v2",
       "vars": {
         "NODE_ENV": "production"
       },
