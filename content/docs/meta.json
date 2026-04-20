@@ -1,0 +1,22 @@
+{
+  "title": "NVNM Chain Docs",
+  "pages": [
+    "index",
+    "---Getting Started---",
+    "getting-started/how-to-connect-wallets-to-testnet",
+    "getting-started/how-to-setup-your-keplr-wallet",
+    "---Node Operators---",
+    "operators/overview/getting-started",
+    "operators/overview/what-are-governator-nodes",
+    "---Node Setup---",
+    "operators/node-setup-and-deployment/validator-nodes/initial-setup-notes",
+    "operators/node-setup-and-deployment/validator-nodes/running-a-node",
+    "operators/node-setup-and-deployment/validator-nodes/becoming-a-validator",
+    "operators/node-setup-and-deployment/validator-nodes/configuring-systemd-service",
+    "---Reference---",
+    "resources/network-details",
+    "resources/chain-parameters",
+    "resources/evm-precompiles",
+    "resources/peers"
+  ]
+}

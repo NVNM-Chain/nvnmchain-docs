@@ -27,3 +27,14 @@ yarn-error.log*
 /interchain-queries-reference
 
 CLAUDE.md
+
+# Next.js
+.open-next/
+.next/
+.source/
+out/
+
+# Env files
+.env
+.env.local
+.env.*.local

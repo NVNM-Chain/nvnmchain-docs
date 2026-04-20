@@ -1,0 +1,31 @@
+{
+	// NVNM Chain Docs — Single Cloudflare Worker serving UNMINT Documentation Framework based on Next.js.
+	//
+	//
+	// Deploy: pnpm deploy        (builds + deploys)
+	// Dev:    pnpm cf:dev         (local wrangler dev)
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "nvnmchain-docs-v2",
+  "compatibility_date": "2025-09-27",
+  "compatibility_flags": [
+		"nodejs_compat"
+	],
+  "main": ".open-next/worker.js",
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "env": {
+    "prod": {
+      "vars": {
+        "NODE_ENV": "production"
+      },
+      "routes": [
+        {
+          "pattern": "docs.testnet.nvnmchain.io",
+          "custom_domain": true
+        }
+      ]
+    }
+  }
+}

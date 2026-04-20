@@ -52,11 +52,11 @@ This is sufficient for testnet, for which the security requirements are low.
 
   Setting up the opt-in is required to run NVNM Chain L2 Consumer.
 
-  <Danger>
+  <Warning>
   Make sure `$NVNMCHAIN_CONSENSUS_PUBKEY` returns the validator consensus pubkey you expect. If you omit the `$NVNM_CONSENSUS_PUBKEY` argument, the consumer chain will use the same consensus pubkey as the provider chain that you are running for the validator. 
   
   That is, you will need to run the consumer chain validator with the same validator key as the provider chain (aka `$MANTRACHAIN_CONSENSUS_PUBKEY`). This is **NOT** recommended.
-</Danger>
+</Warning>
 
 ```bash
 CHAIN_ID=mantra-dukong-1
