@@ -1,55 +1,82 @@
-# Mintlify Starter Kit
+# NVNM Chain Docs v2
 
-Use the starter kit to get your docs deployed and ready to customize.
+Documentation site for NVNM Chain, built with the Unmint/Fumadocs stack on Next.js.  
+This repo publishes MDX-based docs for users and operators, plus technical chain resources.
 
-Click the green **Use this template** button at the top of this repo to copy the Mintlify starter kit. The starter kit contains examples with
+## Repository snapshot
 
-- Guide pages
-- Navigation
-- Customizations
-- API reference pages
-- Use of popular components
+- **Purpose:** NVNM Chain documentation and onboarding for users, operators, and validators.
+- **Content source:** MDX files under `content/docs`.
+- **Current docs sections:**
+  - `content/docs/getting-started` (wallet + testnet onboarding)
+  - `content/docs/operators` (governator/validator setup and operations)
+  - `content/docs/resources` (network details, peers, chain parameters, EVM precompiles)
+- **Rendering stack:** Next.js App Router + `fumadocs-core` + `fumadocs-mdx`.
+- **UI features:** docs sidebar/header, TOC, prev/next pager, built-in search dialog, dark/light theme, custom MDX components.
+- **Deployment target:** Cloudflare Workers via OpenNext (`open-next.config.ts`, `wrangler.jsonc`).
 
-**[Follow the full quickstart guide](https://starter.mintlify.com/quickstart)**
+## Tech stack
 
-## AI-assisted writing
+- Next.js 15
+- React 19
+- Fumadocs (`fumadocs-core`, `fumadocs-mdx`)
+- Tailwind CSS 4
+- TypeScript
+- Vitest + Testing Library
+- OpenNext Cloudflare adapter + Wrangler
 
-Set up your AI coding tool to work with Mintlify:
+## Local development (Fumadocs/Unmint protocol)
+
+### 1) Install dependencies
 
 ```bash
-npx skills add https://mintlify.com/docs
+pnpm install
 ```
 
-This command installs Mintlify's documentation skill for your configured AI tools like Claude Code, Cursor, Windsurf, and others. The skill includes component reference, writing standards, and workflow guidance.
+### 2) Run the docs locally
 
-See the [AI tools guides](/ai-tools) for tool-specific setup.
-
-## Development
-
-Install the [Mintlify CLI](https://www.npmjs.com/package/mint) to preview your documentation changes locally. To install, use the following command:
-
-```
-npm i -g mint
+```bash
+pnpm dev
 ```
 
-Run the following command at the root of your documentation, where your `docs.json` is located:
+Open `http://localhost:3000`.
 
+### 3) Author docs content
+
+- Add/update pages in `content/docs/**/*.mdx`.
+- Keep page frontmatter accurate (`title`, `description`, and any section metadata).
+- Reuse shared components from `app/components/docs/mdx`.
+
+### 4) Validate before pushing
+
+```bash
+pnpm lint
+pnpm test
+pnpm build
 ```
-mint dev
+
+## Build and deployment
+
+### Build for standard Next.js runtime
+
+```bash
+pnpm build
 ```
 
-View your local preview at `http://localhost:3000`.
+### Build for Cloudflare Worker
 
-## Publishing changes
+```bash
+pnpm build:worker
+```
 
-Install our GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app) to propagate changes from your repo to your deployment. Changes are deployed to production automatically after pushing to the default branch.
+### Deploy to Cloudflare
 
-## Need help?
+```bash
+pnpm deploy
+```
 
-### Troubleshooting
+### Preview Cloudflare deployment locally
 
-- If your dev environment isn't running: Run `mint update` to ensure you have the most recent version of the CLI.
-- If a page loads as a 404: Make sure you are running in a folder with a valid `docs.json`.
-
-### Resources
-- [Mintlify documentation](https://mintlify.com/docs)
+```bash
+pnpm preview
+```
