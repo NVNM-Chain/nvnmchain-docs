@@ -1,0 +1,71 @@
+---
+title: "How to Setup Your Rabby Wallet"
+icon: "rabbit"
+---
+
+This guide walks you through installing Rabby Wallet and adding the NVNM Chain network.
+
+<Note>
+  Rabby is an open-source EVM wallet built for DeFi users. It includes built-in transaction simulation and security checks, making it a strong alternative to MetaMask for EVM chains.
+</Note>
+
+## Installation
+
+<Steps>
+  <Step title="Install Rabby">
+    Navigate to [https://rabby.io](https://rabby.io) and install the Rabby extension for your browser (Chrome and Brave are supported).
+
+    <Warning>
+      Only install Rabby from the official site at [rabby.io](https://rabby.io) or directly from the Chrome Web Store. Avoid third-party download links.
+    </Warning>
+  </Step>
+
+  <Step title="Create or import a wallet">
+    Open the Rabby extension and choose one of the following:
+
+    - **Create a new address** — Follow the prompts to generate a new wallet and back up your seed phrase.
+    - **Import an existing wallet** — Enter your 12- or 24-word seed phrase, or import via private key or hardware wallet.
+
+    <Warning>
+      **Never** share your seed phrase or private key with anyone.
+    </Warning>
+  </Step>
+</Steps>
+
+---
+
+## Add NVNM Testnet to Rabby
+
+<Steps>
+  <Step title="Open More Chains">
+    In the Rabby extension, click the chain selector (top-left, showing your current network). Select **More chains** at the bottom of the list to open the full chain browser.
+  </Step>
+
+  <Step title="Search for NVNM Testnet">
+    Use the search bar to look for `NVNM`. If it appears, click **Add** to enable it in your chain list.
+
+    If it does not appear, proceed to add it manually in the next step.
+  </Step>
+
+  <Step title="Add the network manually (if needed)">
+    If NVNM Testnet is not listed, open **Settings → Custom RPC** and add the network with these details:
+
+    | Parameter | Value |
+    | --- | --- |
+    | Network Name | `NVNM Testnet` |
+    | RPC URL | `https://evm.testnet.nvnmchain.io` |
+    | Chain ID | `787111` |
+    | Currency Symbol | `NVNM` |
+    | Block Explorer URL | `https://explorer.evm.testnet.nvnmchain.io` |
+
+    Click **Confirm** to save the network.
+  </Step>
+
+  <Step title="Switch to NVNM Testnet">
+    Select **NVNM Testnet** from the chain selector. Your wallet is now connected to the NVNM Chain testnet.
+  </Step>
+</Steps>
+
+<Tip>
+  Once NVNM Chain mainnet launches, follow the [connect wallets to mainnet](/docs/getting-started/how-to-connect-wallets-to-mainnet) guide to add the mainnet network.
+</Tip>

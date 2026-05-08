@@ -1,0 +1,65 @@
+---
+title: "How to Setup Your MetaMask Wallet"
+icon: "fox"
+---
+
+This guide walks you through installing MetaMask and adding the NVNM Chain network.
+
+<Note>
+  MetaMask is the recommended EVM wallet for NVNM Chain as it correctly renders balances for both the NVNM L2 and MANTRA Chain L1.
+</Note>
+
+## Installation
+
+<Steps>
+  <Step title="Install MetaMask">
+    Navigate to [https://metamask.io/download](https://metamask.io/download) and install the MetaMask extension for your browser (Chrome, Firefox, Brave, or Edge are supported).
+
+    <Warning>
+      Only install MetaMask from the official site or your browser's extension store. Avoid third-party download links.
+    </Warning>
+  </Step>
+
+  <Step title="Create or import a wallet">
+    Open the MetaMask extension and choose one of the following:
+
+    - **Create a new wallet** — Follow the prompts to set a password and save your Secret Recovery Phrase.
+    - **Import an existing wallet** — Enter your 12- or 24-word Secret Recovery Phrase.
+
+    <Warning>
+      **Never** share your Secret Recovery Phrase with anyone. MetaMask support will never ask for it.
+    </Warning>
+  </Step>
+</Steps>
+
+---
+
+## Add NVNM Testnet to MetaMask
+
+<Steps>
+  <Step title="Open network settings">
+    Click the network dropdown at the top of the MetaMask extension, then select **Add a custom network**.
+  </Step>
+
+  <Step title="Enter network details">
+    Fill in the following details:
+
+    | Parameter | Value |
+    | --- | --- |
+    | Network Name | `NVNM Testnet` |
+    | RPC URL | `https://evm.testnet.nvnmchain.io` |
+    | Chain ID | `787111` |
+    | Currency Symbol | `NVNM` |
+    | Block Explorer URL | `https://explorer.evm.testnet.nvnmchain.io` |
+
+    Click **Save** to add the network.
+  </Step>
+
+  <Step title="Switch to NVNM Testnet">
+    Select **NVNM Testnet** from the network dropdown. Your wallet is now connected to the NVNM Chain testnet.
+  </Step>
+</Steps>
+
+<Tip>
+  Once NVNM Chain mainnet launches, follow the [connect wallets to mainnet](/docs/getting-started/how-to-connect-wallets-to-mainnet) guide to add the mainnet network.
+</Tip>
