@@ -1,0 +1,185 @@
+---
+title: "Anchoring Module"
+description: >-
+  EVM precompile for the Anchoring module — manage registries, records, and role-based access from Solidity or any EVM client.
+---
+
+The Anchoring module is a custom Cosmos SDK module exposed to the EVM through a precompiled contract. It allows EVM applications to create registries, anchor off-chain artifacts (documents, files, data) on-chain via checksummed records, and manage access through a role-based permission system.
+
+**Precompile Address:** `0x0000000000000000000000000000000000000A00`
+
+## Core Concepts
+
+- **Registry** — A named container for records. Any user can create one and automatically becomes its admin.
+- **Record** — An anchored reference to off-chain data, identified by a checksum. Records are versioned: submitting the same checksum to the same registry increments the version while preserving the `recordId`.
+- **Roles** — Two roles govern access: `admin` (full control, can grant/revoke roles) and `editor` (can add records and update status).
+
+## Functions
+
+### Transactions
+
+| Function | Description |
+| --- | --- |
+| `addRegistry(string name, string description)` | Creates a new registry. Returns the `registryId`. Caller becomes admin. |
+| `addRecord(Record record)` | Adds a record to a registry. If the checksum already exists, a new version is created. |
+| `updateRecordStatus(uint64 registryId, uint64 recordId, string checksum, uint64 index, string status)` | Updates the status of a specific record version. |
+| `grantRole(uint64 registryId, string checksum, address account, string role)` | Grants a role to an address. Pass an empty `checksum` for registry-level scope. |
+| `revokeRole(uint64 registryId, string checksum, address account, string role)` | Revokes a role from an address. |
+
+### Queries
+
+| Function | Description |
+| --- | --- |
+| `records(string registry, string checksum, uint64 recordId, uint64 index, PageRequest pagination)` | Fetches records. All filter parameters are optional — pass empty/zero to ignore. |
+| `registries(uint64 registryId, string name, PageRequest pagination)` | Fetches registries by ID or name. |
+
+<Note>
+Queries are read-only and do not require any permissions.
+</Note>
+
+## Data Structures
+
+### Record
+
+```solidity
+struct Record {
+    string registry;      // Registry name
+    string uri;           // Link to off-chain data (e.g. IPFS URI)
+    string checksum;      // Cryptographic hash of the data
+    string checksumAlgo;  // Algorithm used (e.g. "sha256")
+    string metadata;      // JSON metadata string
+    string timestamp;     // Set by the chain — ignored on input
+    string status;        // User-defined (e.g. "active", "removed")
+    uint64 recordId;      // Set by the chain — use 0 on input
+    uint64 index;         // Version index — set by the chain
+    bool   isLatest;      // Latest version flag — set by the chain
+}
+```
+
+### Registry
+
+```solidity
+struct Registry {
+    uint64 id;
+    string name;
+    string description;
+    string creator;       // Bech32 address of the creator
+    string createdAt;
+}
+```
+
+### PageRequest / PageResponse
+
+```solidity
+struct PageRequest {
+    bytes  key;
+    uint64 offset;
+    uint64 limit;
+    bool   countTotal;
+    bool   reverse;
+}
+
+struct PageResponse {
+    bytes  nextKey;
+    uint64 total;
+}
+```
+
+## Permission Model
+
+The module uses hierarchical role-based access control. When a permission check runs, it evaluates roles in order — **Record → Registry → Global** — and permits the action at the first match.
+
+| Operation | Required Role |
+| --- | --- |
+| `addRegistry` | Any user |
+| `addRecord` | `admin` or `editor` |
+| `updateRecordStatus` | `admin` or `editor` |
+| `grantRole` | `admin` only |
+| `revokeRole` | `admin` only |
+| Queries | None |
+
+### Role Scoping
+
+- **Record-level** — Applies to a single checksum. Grant with a specific `checksum` value.
+- **Registry-level** — Applies to all records in a registry. Grant with an empty `checksum`.
+- **Global** — Applies across all registries (assigned at the chain level).
+
+Record-level roles take precedence over registry-level roles. A user with `editor` at the registry level but `admin` on a specific record will have admin permissions for that record only.
+
+## Usage Examples
+
+### Creating a Registry
+
+```python
+DOCUMENT_PRECOMPILE = ContractAsync.from_abi(DOCUMENT_PRECOMPILE_ABI)
+DOCUMENT_ADDRESS = "0x0000000000000000000000000000000000000A00"
+
+receipt = await DOCUMENT_PRECOMPILE.fns.addRegistry(
+    "my-registry",
+    "A registry for document anchoring"
+).transact(w3, admin_account, to=DOCUMENT_ADDRESS, gas=100_000)
+```
+
+### Adding a Record
+
+```python
+record = (
+    "my-registry",          # registry
+    "ipfs://QmABC123...",   # uri
+    "abc123def456",         # checksum
+    "sha256",               # checksumAlgo
+    '{"document": "..."}',  # metadata (JSON string)
+    "",                     # timestamp (chain sets this)
+    "active",               # status
+    0,                      # recordId (chain sets this)
+    0,                      # index (chain sets this)
+    False                   # isLatest (chain sets this)
+)
+
+receipt = await DOCUMENT_PRECOMPILE.fns.addRecord(record).transact(
+    w3, admin_account, to=DOCUMENT_ADDRESS, gas=100_000
+)
+```
+
+### Querying Records
+
+```python
+pagination = (b"", 0, 100, False, False)
+
+records, page_response = await DOCUMENT_PRECOMPILE.fns.records(
+    "my-registry",  # filter by registry (empty string = all)
+    "",             # filter by checksum (empty string = all)
+    0,              # recordId (0 = ignore)
+    0,              # index (0 = ignore)
+    pagination
+).call(w3, to=DOCUMENT_ADDRESS)
+```
+
+### Granting a Role
+
+```python
+# Grant registry-level editor role (empty checksum = registry scope)
+await DOCUMENT_PRECOMPILE.fns.grantRole(
+    registry_id,
+    "",              # empty = registry-level
+    user_address,    # EVM address
+    "editor"
+).transact(w3, admin_account, to=DOCUMENT_ADDRESS)
+
+# Grant record-level admin role (specific checksum)
+await DOCUMENT_PRECOMPILE.fns.grantRole(
+    registry_id,
+    "abc123def456",  # specific document checksum
+    user_address,
+    "admin"
+).transact(w3, admin_account, to=DOCUMENT_ADDRESS)
+```
+
+## Error Handling
+
+| Scenario | Result |
+| --- | --- |
+| Non-admin calls `grantRole` or `revokeRole` | Transaction reverts |
+| `addRecord` with an invalid registry name | Transaction reverts |
+| Query for a non-existent registry or checksum | Returns empty result |
+| Granting an already-held role | Succeeds (idempotent) |
