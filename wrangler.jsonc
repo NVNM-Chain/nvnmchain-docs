@@ -21,7 +21,13 @@
       "vars": {
         "NODE_ENV": "production"
       },
+      "workers_dev": true,
+      "preview_urls": true,
       "routes": [
+        {
+          "pattern": "docs.nvnmchain.io",
+          "custom_domain": true
+        },
         {
           "pattern": "docs.testnet.nvnmchain.io",
           "custom_domain": true
