@@ -6,19 +6,17 @@ icon: "link"
 
 This page lists peer information for connecting to MANTRA and NVNM Chain networks.
 
-<Tabs>
-  <Tab title="NVNM Chain L2: Testnet">
-    ## Testnet (nvnm-testnet-1)
+# Mainnet
 
-    ### Seed Nodes
+<Tabs>
+  <Tab title="NVNM Chain L2: Mainnet">
+    **Seed Nodes**
 
     ```
     xxx
     ```
 
-    ### Additional P2P Peers
-
-    ## Configuration
+    **Additional P2P Peers**
 
     To add these peers to your node configuration:
 
@@ -42,7 +40,7 @@ This page lists peer information for connecting to MANTRA and NVNM Chain network
     persistent_peers = ""
     ```
 
-    ## Addrbook
+    **Addrbook**
 
     You can also bootstrap your node with a pre-existing addrbook:
 
@@ -50,18 +48,18 @@ This page lists peer information for connecting to MANTRA and NVNM Chain network
     wget -O ~/.nvnmchain/config/addrbook.json https://raw.githubusercontent.com/MANTRA-Chain/net-nvnmchain/main/nvnm-testnet-1/addrbook.json
     ```
   </Tab>
-  <Tab title="MANTRA Chain L1: DuKong Testnet">
-    ## Testnet (mantra-dukong-1)
-
-    ### Seed Nodes
+  <Tab title="MANTRA Chain L1: Mainnet">
+    **Seed Nodes**
 
     ```
-    7e061edecef73a700b699c785f61a44ca981ff7f@seed0.dukong.mantrachain.io:26656
+    32276da966637722914411e16ca91bd37dcd1c28@seed0.mantrachain.io:26656
+    9f5235b418c87af4302619705d0bf4748249ca6b@seed1.mantrachain.io:26656
+    b0acfd505bb4bc0c39d095663d310c253de18210@seed2.mantrachain.io:26656
+    f153213f0fe5d3cbe6e1f75d7ac0b4a27e70d31b@seed-mantra.r93axnodes.cloud:13156
+    16ab08754dd0dc8b4d9202db16cb354ff618e3d9@mantra-mainnet-seed.itrocket.net:22656
     ```
 
-    ### Additional P2P Peers
-
-    ## Configuration
+    **Additional P2P Peers**
 
     To add these peers to your node configuration:
 
@@ -85,7 +83,90 @@ This page lists peer information for connecting to MANTRA and NVNM Chain network
     persistent_peers = ""
     ```
 
-    ## Addrbook
+    **Addrbook**
+
+    You can also bootstrap your node with a pre-existing addrbook:
+
+    ```bash
+    wget -O ~/.mantrachain/config/addrbook.json https://raw.githubusercontent.com/MANTRA-Chain/net/main/mantra-1/addrbook.json
+    ```
+  </Tab>
+</Tabs>
+
+# Testnet
+
+<Tabs>
+  <Tab title="NVNM Chain L2: Testnet">
+    **Seed Nodes**
+
+    ```
+    xxx
+    ```
+
+    **Additional P2P Peers**
+
+    To add these peers to your node configuration:
+
+    1. Edit your `config.toml` file:
+
+    ```bash
+    nano ~/.nvnmchain/config/config.toml
+    ```
+
+    2. Add the seed nodes:
+
+    ```toml
+    # Comma separated list of seed nodes to connect to
+    seeds = ""
+    ```
+
+    3. Optionally, add some persistent peers:
+
+    ```toml
+    # Comma separated list of nodes to keep persistent connections to
+    persistent_peers = ""
+    ```
+
+    **Addrbook**
+
+    You can also bootstrap your node with a pre-existing addrbook:
+
+    ```bash
+    wget -O ~/.nvnmchain/config/addrbook.json https://raw.githubusercontent.com/MANTRA-Chain/net-nvnmchain/main/nvnm-testnet-1/addrbook.json
+    ```
+  </Tab>
+  <Tab title="MANTRA Chain L1: DuKong Testnet">
+    **Seed Nodes**
+
+    ```
+    7e061edecef73a700b699c785f61a44ca981ff7f@seed0.dukong.mantrachain.io:26656
+    ```
+
+    **Additional P2P Peers**
+
+    To add these peers to your node configuration:
+
+    1. Edit your `config.toml` file:
+
+    ```bash
+    nano ~/.mantrachain/config/config.toml
+    ```
+
+    2. Add the seed nodes:
+
+    ```toml
+    # Comma separated list of seed nodes to connect to
+    seeds = ""
+    ```
+
+    3. Optionally, add some persistent peers:
+
+    ```toml
+    # Comma separated list of nodes to keep persistent connections to
+    persistent_peers = ""
+    ```
+
+    **Addrbook**
 
     You can also bootstrap your node with a pre-existing addrbook:
 
@@ -94,5 +175,3 @@ This page lists peer information for connecting to MANTRA and NVNM Chain network
     ```
   </Tab>
 </Tabs>
-
-### 
