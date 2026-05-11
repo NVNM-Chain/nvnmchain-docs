@@ -23,6 +23,7 @@
     "resources/chain-parameters",
     "resources/evm-precompiles",
     "resources/using-precompiles",
-    "resources/peers"
+    "resources/peers",
+    "resources/acquiring-mantrausd"
   ]
 }
