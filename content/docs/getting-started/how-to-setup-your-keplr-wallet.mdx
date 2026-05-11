@@ -18,10 +18,6 @@ This guide walks you through installing Keplr Wallet and adding the NVNM Chain n
     <Warning>
       Only install Keplr from the official site at [keplr.app](https://keplr.app) or your browser's extension store. Avoid third-party download links.
     </Warning>
-
-    <Frame>
-      <img src="/images/connect-mainnet/keplr-install.png" alt="Keplr Wallet Installation" />
-    </Frame>
   </Step>
 
   <Step title="Create or import a wallet">
@@ -33,10 +29,6 @@ This guide walks you through installing Keplr Wallet and adding the NVNM Chain n
     <Warning>
       **Never** share your recovery phrase or private key with anyone. Anyone with access can control your wallet and funds.
     </Warning>
-
-    <Frame>
-      <img src="/images/connect-mainnet/keplr-setup.png" alt="Keplr Wallet Setup" />
-    </Frame>
   </Step>
 </Steps>
 
@@ -52,9 +44,20 @@ This guide walks you through installing Keplr Wallet and adding the NVNM Chain n
   <Step title="Search for NVNM Testnet">
     Use the search bar to look for `nvnm testnet`. Check the box next to **NVNM Testnet** to enable it in your wallet.
 
-    <Frame>
-      <img src="/images/connect-testnet/keplr-add-nvnm-testnet.png" alt="Keplr Add NVNM Testnet" />
-    </Frame>
+    If it does not appear, proceed to add it manually in the next step.
+  </Step>
+
+  <Step title="Add the network manually (if needed)">
+    If NVNM Testnet is not listed in Keplr's chain registry, you can add it as a suggested chain using the in-browser registration flow. Visit a chain registration helper (such as the [Cosmos Chain Registry](https://github.com/cosmos/chain-registry) entry for NVNM Testnet) or use the official NVNM testnet add-chain link, then approve the **Add Chain** prompt in Keplr with these details:
+
+    | Parameter | Value |
+    | --- | --- |
+    | Chain ID | `nvnm-testnet-1` |
+    | RPC | `https://rpc.testnet.nvnmchain.io` |
+    | REST/API | `https://api.testnet.nvnmchain.io` |
+    | Currency Symbol | `NVNM` |
+
+    Click **Approve** to save the network.
   </Step>
 
   <Step title="Save and switch to NVNM Testnet">
@@ -77,6 +80,21 @@ This guide walks you through installing Keplr Wallet and adding the NVNM Chain n
 
   <Step title="Search for NVNM Mainnet">
     Use the search bar to look for `nvnm`. Check the box next to **NVNM Mainnet** to enable it in your wallet.
+
+    If it does not appear, proceed to add it manually in the next step.
+  </Step>
+
+  <Step title="Add the network manually (if needed)">
+    If NVNM Mainnet is not listed in Keplr's chain registry, you can add it as a suggested chain using the in-browser registration flow. Approve the **Add Chain** prompt in Keplr with these details:
+
+    | Parameter | Value |
+    | --- | --- |
+    | Chain ID | `nvnm-1` |
+    | RPC | `https://rpc.nvnmchain.io` |
+    | REST/API | `https://api.nvnmchain.io` |
+    | Currency Symbol | `NVNM` |
+
+    Click **Approve** to save the network.
   </Step>
 
   <Step title="Save and switch to NVNM Mainnet">
