@@ -3,57 +3,87 @@ title: "How to Setup Your Keplr Wallet"
 icon: "wallet"
 ---
 
-This guide walks you through setting up Keplr Wallet and connecting it to MANTRA Chain for both testnet and mainnet.
+This guide walks you through installing Keplr Wallet and adding the NVNM Chain network.
+
+<Note>
+  Keplr is the recommended Cosmos wallet for NVNM Chain. It allows you to interact with NVNM Chain and the broader Cosmos ecosystem natively.
+</Note>
+
+## Installation
 
 <Steps>
-  <Step title="Install Keplr Wallet">
-    Navigate to [https://keplr.app/](https://keplr.app/) and install the Keplr Wallet extension compatible with your browser. Keplr Wallet is essential for managing your crypto assets on the Cosmos ecosystem.
+  <Step title="Install Keplr">
+    Navigate to [https://keplr.app](https://keplr.app) and install the Keplr extension for your browser (Chrome, Firefox, Brave, and Edge are supported).
+
+    <Warning>
+      Only install Keplr from the official site at [keplr.app](https://keplr.app) or your browser's extension store. Avoid third-party download links.
+    </Warning>
 
     <Frame>
       <img src="/images/connect-mainnet/keplr-install.png" alt="Keplr Wallet Installation" />
     </Frame>
   </Step>
 
-  <Step title="Set Up Keplr Wallet">
-    Add a wallet name, set up a password, and secure your seed phrase or recovery phrase.
+  <Step title="Create or import a wallet">
+    Open the Keplr extension and choose one of the following:
+
+    - **Create a new wallet** — Follow the prompts to set a wallet name, password, and back up your recovery phrase.
+    - **Import an existing wallet** — Enter your 12- or 24-word recovery phrase, or import via private key or hardware wallet.
 
     <Warning>
-      **Never** share your recovery phrase with anyone.
+      **Never** share your recovery phrase or private key with anyone. Anyone with access can control your wallet and funds.
     </Warning>
 
     <Frame>
       <img src="/images/connect-mainnet/keplr-setup.png" alt="Keplr Wallet Setup" />
     </Frame>
   </Step>
+</Steps>
 
-  <Step title="Add MANTRA Chain to Keplr">
-    Visit the official MANTRA Chain Explorer at [https://explorer.mantrachain.io](https://explorer.mantrachain.io/). Select the applicable chain and use the **Wallet Tools** to import the chain connection details into the wallet of your choosing (Keplr, Leap, and MetaMask are supported).
+---
 
-    Click **Approve** to ensure seamless integration.
+## Add NVNM Testnet to Keplr
+
+<Steps>
+  <Step title="Open Manage Chain Visibility">
+    Click the **menu** button in the Keplr extension and select **Manage Chain Visibility** to open the chain browser.
   </Step>
 
-  <Step title="Manage Chain Visibility">
-    Open your Keplr Wallet extension and navigate to the **Manage Chain Visibility** section. From here, add MANTRA Chain to your wallet.
+  <Step title="Search for NVNM Testnet">
+    Use the search bar to look for `nvnm testnet`. Check the box next to **NVNM Testnet** to enable it in your wallet.
 
     <Frame>
-      <img src="/images/connect-mainnet/keplr-manage-chains.png" alt="Keplr Manage Chain Visibility" />
+      <img src="/images/connect-testnet/keplr-add-nvnm-testnet.png" alt="Keplr Add NVNM Testnet" />
     </Frame>
   </Step>
 
-  <Step title="Add MANTRA DuKong Testnet">
-    Search for **MANTRA** in the list of available chains and check the box next to **MANTRA DuKong Testnet** to access testnet features for development purposes.
-  </Step>
-
-  <Step title="Copy Your MANTRA Address">
-    Grab your MANTRA address from Keplr Wallet via the MANTRA token address. This address serves as your unique identifier on the MANTRA network and is essential for receiving tokens.
-  </Step>
-
-  <Step title="Request Testnet Coins from Faucet">
-    To get testnet tokens:
-
-    1. Navigate to the [MANTRA Dukong Faucet](https://faucet.dukong.mantrachain.io/)
-    2. Ensure **mantra-dukong-1** is selected as the network
-    3. Enter your MANTRA wallet address or EVM wallet address
-    4. Click **Request Token** — the testnet tokens will be sent to your wallet
+  <Step title="Save and switch to NVNM Testnet">
+    Click **Save** to add the network. Select **NVNM Testnet** from the chain selector. Your wallet is now connected to the NVNM Chain testnet.
   </Step>
 </Steps>
+
+---
+
+## Add NVNM Mainnet to Keplr
+
+<Warning>
+  NVNM Chain mainnet has not launched yet. This section will be updated once mainnet is live and the chain is registered with Keplr.
+</Warning>
+
+<Steps>
+  <Step title="Open Manage Chain Visibility">
+    Click the **menu** button in the Keplr extension and select **Manage Chain Visibility** to open the chain browser.
+  </Step>
+
+  <Step title="Search for NVNM Mainnet">
+    Use the search bar to look for `nvnm`. Check the box next to **NVNM Mainnet** to enable it in your wallet.
+  </Step>
+
+  <Step title="Save and switch to NVNM Mainnet">
+    Click **Save** to add the network. Select **NVNM Mainnet** from the chain selector. Your wallet is now connected to NVNM Chain mainnet.
+  </Step>
+</Steps>
+
+<Tip>
+  Once NVNM Chain mainnet launches, follow the [connect wallets to mainnet](/docs/getting-started/how-to-connect-wallets-to-mainnet) guide to add the mainnet network.
+</Tip>

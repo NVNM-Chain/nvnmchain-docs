@@ -3,27 +3,33 @@ title: "How to Connect Wallets to Testnet"
 icon: "flask-vial"
 ---
 
-This guide walks you through connecting MetaMask and Keplr wallets to the NVNM L2 Testnet, _(powered by the L1 MANTRA Dukong Testnet)_.
-
-## MetaMask Setup
+This guide walks you through connecting MetaMask, Rabby, and Keplr to the NVNM Chain testnet, _(powered by the L1 MANTRA Dukong Testnet)_.
 
 <Note>
-  MetaMask is currently the recommended wallet as it can correctly render balances for both EVM on both NVNM Chain and NVNM's Parent L1: MANTRA Chain.
+  If you haven't installed your wallet yet, follow the [MetaMask](/getting-started/how-to-setup-your-metamask-wallet), [Rabby](/getting-started/how-to-setup-your-rabby-wallet), or [Keplr](/getting-started/how-to-setup-your-keplr-wallet) setup guide first.
 </Note>
 
-To install MetaMask, refer to the [official installation guide](https://support.metamask.io/start/getting-started-with-metamask/).
+---
+
+## MetaMask
 
 <Steps>
-  <Step title="Add the NVNM Testnet Network">
-    Open MetaMask and select the network dropdown (top-right corner) to add a custom network with the following details:
+  <Step title="Open network settings">
+    Click the network dropdown at the top of the MetaMask extension, then select **Add a custom network**.
+  </Step>
+
+  <Step title="Enter testnet network details">
+    Fill in the following details:
 
     | Parameter | Value |
     | --- | --- |
     | Network Name | `NVNM Testnet` |
     | RPC URL | `https://evm.testnet.nvnmchain.io` |
-    | Chain ID (EVM) | `787111` |
+    | Chain ID | `787111` |
     | Currency Symbol | `NVNM` |
-    | EVM Block Explorer URL | `https://explorer.evm.testnet.nvnmchain.io` |
+    | Block Explorer URL | `https://explorer.evm.testnet.nvnmchain.io` |
+
+    Click **Save** to add the network.
 
     <Frame>
       <img src="/images/connect-testnet/metamask-network-settings.png" alt="MetaMask Network Settings" />
@@ -33,48 +39,54 @@ To install MetaMask, refer to the [official installation guide](https://support.
     </Frame>
   </Step>
 
-  <Step title="Verify Your Connection">
-    Switch to the **NVNM Testnet** network and you should see balances on the network, this will primarily be the native gas token for NVNM Chain: MANTRA USD.
-    // Todo: Add image of MetaMask showing MANTRA USD balance on NVNM Testnet
+  <Step title="Switch to NVNM Testnet">
+    Select **NVNM Testnet** from the network dropdown. Your wallet is now connected to the NVNM Chain testnet, with the native gas token shown as MANTRA USD.
   </Step>
 </Steps>
 
 ---
 
-## Keplr Setup
+## Rabby
 
 <Steps>
-  <Step title="Install Keplr Wallet">
-    Navigate to [https://keplr.app/](https://keplr.app/) and install the Keplr Wallet extension compatible with your browser. Keplr Wallet is essential for managing your crypto assets on the Cosmos ecosystem.
-
-    <Frame>
-      <img src="/images/connect-testnet/keplr-install.png" alt="Keplr Wallet Installation" />
-    </Frame>
+  <Step title="Open More Chains">
+    In the Rabby extension, click the chain selector (top-left) and select **More chains** to open the chain browser.
   </Step>
 
-  <Step title="Set Up Keplr Wallet">
-    Add a wallet name, set up a password, and secure your seed phrase or recovery phrase.
+  <Step title="Search for NVNM Testnet">
+    Use the search bar to look for `NVNM`. If it appears, click **Add** to enable it.
 
-    <Warning>
-      **Never** share your recovery phrase with anyone.
-    </Warning>
-
-    <Frame>
-      <img src="/images/connect-testnet/keplr-setup.png" alt="Keplr Wallet Setup" />
-    </Frame>
+    If it does not appear, add it manually using **Settings → Custom RPC** with the network details above.
   </Step>
 
-  <Step title="Add NVNM Chain to Keplr Wallet">
-    Integrate the NVNM Testnet into your Keplr Wallet:
+  <Step title="Switch to NVNM Testnet">
+    Select **NVNM Testnet** from the chain selector to connect.
+  </Step>
+</Steps>
 
-    1. Click the **menu** button in Keplr
-    2. Search for `nvnm testnet`
-    3. Select **NVNM Testnet**
+---
+
+## Keplr
+
+<Steps>
+  <Step title="Open Manage Chain Visibility">
+    Open the Keplr extension, go to **Settings**, and select **Manage Chain Visibility**.
+  </Step>
+
+  <Step title="Search for NVNM Testnet">
+    Search for `nvnm testnet` and enable **NVNM Testnet** from the list.
 
     <Frame>
       <img src="/images/connect-testnet/keplr-add-nvnm-testnet.png" alt="Keplr Add NVNM Testnet" />
     </Frame>
+  </Step>
 
-    Click **Save** to confirm the integration.
+  <Step title="Confirm and save">
+    Click **Save** to add NVNM Testnet to your Keplr wallet.
   </Step>
 </Steps>
+
+<Tip>
+  Check the [Network Details](/docs/resources/network-details) page for the latest testnet endpoints and chain parameters.
+</Tip>
+
