@@ -1,6 +1,7 @@
 {
   "title": "NVNM Chain Docs",
   "pages": [
+    "---Home---",
     "index",
     "---Getting Started---",
     "getting-started/how-to-connect-wallets-to-testnet",
@@ -21,6 +22,8 @@
     "resources/network-details",
     "resources/chain-parameters",
     "resources/evm-precompiles",
-    "resources/peers"
+    "resources/using-precompiles",
+    "resources/peers",
+    "resources/acquiring-mantrausd"
   ]
 }

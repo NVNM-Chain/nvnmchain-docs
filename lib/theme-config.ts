@@ -29,10 +29,10 @@ export const siteConfig = {
       href: 'https://hub.inveniam.io',
     },
   },
-  banner: {
-    content: '⚠️ NVNM Chain Testnet `nvnm-testnet-1` Genesis is IN PROGRESS. Endpoints and services may be unstable or unusable until genesis is complete.',
-    dismissible: false,
-  },
+  // banner: {
+  //   content: '⚠️ NVNM Chain Testnet `nvnm-testnet-1` Genesis is IN PROGRESS. Endpoints and services may be unstable or unusable until genesis is complete.',
+  //   dismissible: false,
+  // },
 }
 
 export const themeConfig = {

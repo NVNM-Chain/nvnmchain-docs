@@ -1,0 +1,90 @@
+---
+title: Acquiring mantraUSD
+description: Every supported path to get mantraUSD onto MANTRA Chain — Express Bridge, cross-chain swap via Squid Router, and DEX routes via Lucid and Hyperlane.
+---
+
+<Note>
+  This documentation is under development - while the first step is acquiring mantraUSD, we are working to build a native interface to transfer this mantraUSD to NVNM Chain (which transfers in the form of wrapped mantraUSD `wmantraUSD`). Keep an eye on this space! Updates coming soon!
+</Note>
+
+mantraUSD is the deposit and gas asset for NVNM Chain. This page covers every supported path to get mantraUSD into your wallet on MANTRA Chain.
+
+---
+
+## Option 1 — Express Bridge (get.mantrausd.com)
+
+The fastest and simplest route. The [mantraUSD Express Bridge](https://get.mantrausd.com) accepts USDC or USDT from Ethereum, Base, Polygon, and Arbitrum and delivers mantraUSD to your MANTRA Chain wallet at a 1:1 ratio with no slippage.
+
+This is the recommended path if you are starting from stablecoins on a major EVM chain.
+
+**Steps:**
+1. Go to [get.mantrausd.com](https://get.mantrausd.com)
+2. Connect your wallet on the source chain
+3. Select your source asset (USDC or USDT) and source chain
+4. Enter the amount and confirm the transaction
+5. mantraUSD arrives on MANTRA Chain at 1:1
+
+---
+
+## Option 2 — Squid Router (squidrouter.com)
+
+[Squid Router](https://squidrouter.com) is a cross-chain swap aggregator. It routes from any supported asset on any supported chain directly into mantraUSD on MANTRA Chain in a single transaction.
+
+Use this path if you are starting from a non-stablecoin asset (ETH, BTC, USDC on an unsupported chain, etc.) or if you want a single-step cross-chain swap without manual bridging.
+
+**Steps:**
+1. Go to [Squid Router](https://app.squidrouter.com/?fromChain=arbitrum&toChain=mantra&fromToken=eth&toToken=mantrausd)
+2. Set the destination chain to MANTRA Chain and the destination token to mantraUSD
+3. Select your source chain and asset
+4. Review the route and confirm
+
+---
+
+## Option 3 — Bridge USDT via Lucid, then swap on QuickSwap
+
+This path uses Lucid to bridge USDT to MANTRA Chain, then swaps to mantraUSD on QuickSwap.
+
+**Step 1 — Bridge USDT via Lucid**
+
+Go to [Lucid](https://app.lucidlabs.fi/bridge) and bridge USDT from your source chain to MANTRA Chain. Lucid delivers native USDT (`0x3806640578b710d8480910bF51510bc538d2F51A`) to your MANTRA Chain EVM wallet.
+
+**Step 2 — Swap USDT for mantraUSD on QuickSwap**
+
+Go to [QuickSwap](https://dapp.quickswap.exchange/swap?type=v4&from=0x3806640578b710d8480910bF51510bc538d2F51A&to=0xd2b95283011E47257917770D28Bb3EE44c849f6F&chainId=5888) on MANTRA Chain (Chain ID 5888). The link preloads USDT as the source and mantraUSD as the destination. Confirm the swap.
+
+> **Note:** You need a small MANTRA balance in your wallet to pay gas on MANTRA Chain. See [Acquire Tokens](../getting-started/acquire-tokens) if your wallet has no MANTRA for gas.
+
+---
+
+## Option 4 — Bridge USDC via Hyperlane, then swap on QuickSwap
+
+This path uses Hyperlane to bridge USDC to MANTRA Chain, then swaps to mantraUSD on QuickSwap.
+
+**Step 1 — Bridge USDC via Hyperlane**
+
+Go to [Hyperlane Nexus](https://nexus.hyperlane.xyz/?destination=mantra&destinationToken=USDC) and bridge USDC from your source chain to MANTRA Chain. The link preloads MANTRA Chain as the destination with USDC as the destination token. Hyperlane delivers bridged USDC (`0x5E76be0F4e09057D75140216F70fd4cE3365bb29`) to your MANTRA Chain EVM wallet.
+
+**Step 2 — Swap USDC for mantraUSD on QuickSwap**
+
+Go to [QuickSwap](https://dapp.quickswap.exchange/swap?type=v4&from=0x5E76be0F4e09057D75140216F70fd4cE3365bb29&to=0xd2b95283011E47257917770D28Bb3EE44c849f6F&chainId=5888) on MANTRA Chain (Chain ID 5888). The link preloads USDC as the source and mantraUSD as the destination. Confirm the swap.
+
+> **Note:** You need a small MANTRA balance in your wallet to pay gas on MANTRA Chain. See [Acquire Tokens](../getting-started/acquire-tokens) if your wallet has no MANTRA for gas.
+
+---
+
+## Which path should I use?
+
+| Starting point | Recommended path |
+|---|---|
+| USDC or USDT on Ethereum, Base, Polygon, Arbitrum | Option 1 — Express Bridge |
+| Any asset on any supported chain | Option 2 — Squid Router |
+| USDT on another chain, prefer manual bridge | Option 3 — Lucid + QuickSwap |
+| USDC on another chain, prefer manual bridge | Option 4 — Hyperlane + QuickSwap |
+
+---
+
+## Next
+
+- [RWA Vaults overview](../rwa-vaults/overview)
+- [wmantraUSD token](../rwa-vaults/wmantrausd)
+- [Contract addresses](contract-addresses)
