@@ -10,11 +10,12 @@ export default function DocsLayout({
   children: React.ReactNode
 }) {
   const tree = source.pageTree
+  const banner = (siteConfig as { banner?: { content: string; dismissible?: boolean } }).banner
 
   return (
     <div className="min-h-screen flex flex-col">
-      {siteConfig.banner && (
-        <SiteBanner content={siteConfig.banner.content} dismissible={siteConfig.banner.dismissible} />
+      {banner && (
+        <SiteBanner content={banner.content} dismissible={banner.dismissible} />
       )}
       <DocsHeader tree={tree} />
       <div className="flex-1">
