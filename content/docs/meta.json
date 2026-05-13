@@ -3,6 +3,7 @@
   "pages": [
     "---Home---",
     "index",
+    "bridging-mantrausd-to-nvnmchain",
     "---Getting Started---",
     "getting-started/how-to-connect-wallets-to-testnet",
     "getting-started/how-to-connect-wallets-to-mainnet",

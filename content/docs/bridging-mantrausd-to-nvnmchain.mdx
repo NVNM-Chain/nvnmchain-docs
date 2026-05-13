@@ -1,0 +1,267 @@
+---
+title: "Bridging mantraUSD to NVNM Chain"
+description: "How to bridge mantraUSD from MANTRA Chain to NVNM Chain as wmantraUSD — the gas token for NVNM Chain. Covers testnet (nvnm-testnet-1) and mainnet (nvnm-1) flows."
+icon: "right-left"
+---
+
+<Info>
+  **NVNM Chain** is a CCV consumer chain of **MANTRA Chain**. The gas token on NVNM Chain is **wmantraUSD**, bridged from the provider chain via IBC. There is no standalone bridge UI — tokens are obtained by wrapping `mantraUSD` on MANTRA Chain and IBC-transferring the wrapped denom (`wmantraUSD`) to your NVNM Chain address.
+</Info>
+
+Tokens are obtained by wrapping `mantraUSD` (`mmUSD → wmmUSD`) on the parent MANTRA Chain (`mantra-dukong-1` for testnet, `mantra-1` for mainnet) and IBC-transferring to your NVNM Chain address (`nvnm-testnet-1` or `nvnm-1`).
+
+## Prerequisites
+
+- `mantrachaind` binary installed
+- `nvnmchaind` binary installed
+- `cast` ([Foundry](https://book.getfoundry.sh/getting-started/installation)) installed
+- A `mantraUSD` balance available on MANTRA Chain
+  - If you have USDC/USDT on other chains, the [mantraUSD Express Bridge](https://get.mantrausd.com) is the fastest way to acquire `mantraUSD`
+  - See [Acquiring mantraUSD](/resources/acquiring-mantrausd) for all supported paths
+
+### Wallet setup
+
+Import your wallet as an account in Foundry and into the `mantrachaind` and `nvnmchaind` binaries:
+
+```bash
+WALLET_ACCOUNT_NAME=<name-of-your-wallet-here>
+
+mantrachaind keys add $WALLET_ACCOUNT_NAME --recover
+nvnmchaind keys add $WALLET_ACCOUNT_NAME --recover
+cast wallet import $WALLET_ACCOUNT_NAME --interactive --mnemonic
+
+# Ledger is also viable
+mantrachaind keys add $WALLET_ACCOUNT_NAME --ledger
+nvnmchaind keys add $WALLET_ACCOUNT_NAME --ledger
+# For any cast commands below, replace `--account $WALLET_ACCOUNT_NAME`
+# with `--ledger` when using a Ledger device.
+```
+
+### MetaMask / EVM wallet setup
+
+To add NVNM Chain to MetaMask or any EVM wallet, use the network configuration below.
+
+[Keplr](https://github.com/chainapsis/keplr-chain-registry/pull/1461) natively supports both NVNM Chain Cosmos (cointype `118`) and NVNM Chain EVM (cointype `60`, `0x` address).
+
+| Field | Testnet | Mainnet |
+| --- | --- | --- |
+| Network Name | `NVNM Chain` | `NVNM Chain` |
+| RPC URL | `https://evm.testnet.nvnmchain.io` | `https://evm.nvnmchain.io` |
+| Chain ID | `787111` | `1611` |
+| Currency Symbol | `mmUSD` | `mmUSD` |
+| Block Explorer | `https://explorer.evm.testnet.nvnmchain.io` | `https://evm.explorer.nvnmchain.io` |
+
+## Step 1 — Set environment variables
+
+Choose the tab matching the network you are bridging to. The commands in later steps use these variables and are identical across networks.
+
+<Tabs>
+  <Tab title="Mainnet (nvnm-1)">
+    <Info>
+      See [Acquiring mantraUSD](/resources/acquiring-mantrausd) to acquire native `mantraUSD` on MANTRA Chain mainnet. Supported paths include:
+
+      1. [mantraUSD Express Bridge](https://get.mantrausd.com)
+      2. [Squid Router](https://app.squidrouter.com/?fromChain=ethereum&toChain=mantra&fromToken=usdt&toToken=mantrausd)
+      3. [Lucid](https://app.lucidlabs.fi/bridge) (bridge USDC/USDT to MANTRA Chain) + [QuickSwap](https://dapp.quickswap.exchange/swap?type=v4&from=0x5E76be0F4e09057D75140216F70fd4cE3365bb29&to=0xd2b95283011E47257917770D28Bb3EE44c849f6F) (swap to `mantraUSD`)
+      4. [Hyperlane Nexus](https://nexus.hyperlane.xyz/?destination=mantra&destinationToken=USDC) (bridge USDC) + [QuickSwap](https://dapp.quickswap.exchange/swap?type=v4&from=0x5E76be0F4e09057D75140216F70fd4cE3365bb29&to=0xd2b95283011E47257917770D28Bb3EE44c849f6F)
+    </Info>
+
+    ```bash
+    # Fill out the following
+    NVNM_ADDRESS=nvnm1<your_address>
+    WALLET_ACCOUNT_NAME=<name of wallet imported into foundry and mantrachaind/nvnmchaind>
+
+    # MAINNET
+    MANTRA_USD_ADDRESS="0xd2b95283011E47257917770D28Bb3EE44c849f6F"
+    WRAPPED_MANTRA_USD_ADDRESS="0x5EB619e3dcA586c321Bb83282D2916577B5c383d"
+    WRAPPED_MANTRA_USD_DENOM="erc20:0x5EB619e3dcA586c321Bb83282D2916577B5c383d"
+    CONSUMER_DENOM="ibc/$(echo -n "transfer/channel-1/$WRAPPED_MANTRA_USD_DENOM" | shasum -a 256 | awk '{print toupper($1)}')"
+
+    MANTRA_RPC_NODE=https://rpc.mantrachain.io
+    MANTRA_EVM_NODE=https://evm.mantrachain.io
+    MANTRA_CHAIN_ID=mantra-1
+    MANTRA_CHAIN_ID_EVM=5888
+    MANTRA_NVNM_IBC_CHANNEL=channel-9
+    NVNM_RPC_NODE=https://rpc.nvnmchain.io
+
+    # ─── Token amounts ─────────────────────────────────────────────────────────
+    # mantraUSD on MANTRA Chain      → 6  decimals
+    # wmantraUSD on nvnm-1           → 18 decimals
+    # Both variables below must represent the SAME number of tokens.
+    #
+    #   1,000 tokens  → AMOUNT_MANTRA_USD=1000000000       AMOUNT_WMANTRA_USD=1000000000000000000000
+    #  10,000 tokens  → AMOUNT_MANTRA_USD=10000000000      AMOUNT_WMANTRA_USD=10000000000000000000000
+    # 100,000 tokens  → AMOUNT_MANTRA_USD=100000000000     AMOUNT_WMANTRA_USD=100000000000000000000000
+    AMOUNT_MANTRA_USD="10000000"              # 10 mantraUSD  (6  decimals)
+    AMOUNT_WMANTRA_USD="10000000000000000000" # 10 wmantraUSD (18 decimals)
+    ```
+  </Tab>
+  <Tab title="Testnet (nvnm-testnet-1)">
+    <Info>
+      **Testnet Faucet**
+   
+      NVNM Chain Testnet has a faucet available for `wmantraUSD`:
+
+      [https://faucet.testnet.nvnmchain.io](https://faucet.testnet.nvnmchain.io)
+
+      If you only need a small amount of `wmantraUSD` on testnet, use the faucet and skip the manual bridge flow below.
+    </Info>
+    Before setting environment variables, you need `mantraUSD` on the DuKong testnet. Mint directly from the contract on DuKong Blockscout:
+
+    - DuKong `mantraUSD` contract: [`0x4B545d0758eda6601B051259bD977125fbdA7ba2`](https://explorer.dukong.io/token/0x4B545d0758eda6601B051259bD977125fbdA7ba2?tab=read_write_contract)
+    - DuKong `wmantraUSD` contract: `0x36A28B8C8FFD00bEE440dB8273D57451FBeAf767`
+
+    Use the `mint` function under the **Write** tab. Enter the amount with 6 decimals — for example, to mint 1000 `mantraUSD` enter `1000000000`.
+
+    <Note>
+      Your wallet needs `amantra` to pay gas on DuKong. Get DuKong testnet tokens from the faucet: [faucet.dukong.mantrachain.io](https://faucet.dukong.mantrachain.io).
+    </Note>
+
+    ```bash
+    # Fill out the following
+    NVNM_ADDRESS=nvnm1<your_address>
+    WALLET_ACCOUNT_NAME=<name of wallet imported into foundry and mantrachaind/nvnmchaind>
+
+    # TESTNET
+    MANTRA_USD_ADDRESS="0x4B545d0758eda6601B051259bD977125fbdA7ba2"
+    WRAPPED_MANTRA_USD_ADDRESS="0x36A28B8C8FFD00bEE440dB8273D57451FBeAf767"
+    WRAPPED_MANTRA_USD_DENOM="erc20:0x36A28B8C8FFD00bEE440dB8273D57451FBeAf767"
+    CONSUMER_DENOM="ibc/$(echo -n "transfer/channel-1/$WRAPPED_MANTRA_USD_DENOM" | shasum -a 256 | awk '{print toupper($1)}')"
+
+    MANTRA_RPC_NODE=https://rpc.dukong.mantrachain.io
+    MANTRA_EVM_NODE=https://evm.dukong.mantrachain.io
+    MANTRA_CHAIN_ID=mantra-dukong-1
+    MANTRA_CHAIN_ID_EVM=5887
+    MANTRA_NVNM_IBC_CHANNEL=channel-13
+    NVNM_RPC_NODE=https://rpc.testnet.nvnmchain.io
+
+    # ─── Token amounts ─────────────────────────────────────────────────────────
+    # mantraUSD on DuKong (provider)    → 6  decimals
+    # wmantraUSD on nvnm-testnet-1      → 18 decimals
+    # Both variables below must represent the SAME number of tokens.
+    #
+    #   1,000 tokens  → AMOUNT_MANTRA_USD=1000000000       AMOUNT_WMANTRA_USD=1000000000000000000000
+    #  10,000 tokens  → AMOUNT_MANTRA_USD=10000000000      AMOUNT_WMANTRA_USD=10000000000000000000000
+    # 100,000 tokens  → AMOUNT_MANTRA_USD=100000000000     AMOUNT_WMANTRA_USD=100000000000000000000000
+    AMOUNT_MANTRA_USD="1000000000"              # 1000 mantraUSD  (6  decimals)
+    AMOUNT_WMANTRA_USD="1000000000000000000000" # 1000 wmantraUSD (18 decimals)
+    ```
+  </Tab>
+</Tabs>
+
+The remaining steps use the variables you just set and work the same on testnet and mainnet.
+
+## Step 2 — Approve and wrap mantraUSD on MANTRA Chain
+
+<Note>
+  This step can also be completed by interacting with the smart contract directly on Blockscout:
+
+  - **Testnet:** [`0x36A28B8C8FFD00bEE440dB8273D57451FBeAf767`](https://explorer.dukong.io/token/0x36A28B8C8FFD00bEE440dB8273D57451FBeAf767?tab=read_write_contract)
+  - **Mainnet:** [`0x5EB619e3dcA586c321Bb83282D2916577B5c383d`](https://blockscout.mantrascan.io/token/0x5EB619e3dcA586c321Bb83282D2916577B5c383d?tab=read_write_contract)
+
+  Both `approve` and `depositFor` expect the amount in 6 decimals (the `mantraUSD` precision).
+</Note>
+
+<Steps>
+  <Step title="Approve the wmantraUSD contract to spend your mantraUSD">
+    ```bash
+    # AMOUNT_MANTRA_USD uses 6 decimals (mantraUSD on MANTRA Chain)
+    cast send $MANTRA_USD_ADDRESS "approve(address,uint256)" \
+      $WRAPPED_MANTRA_USD_ADDRESS $AMOUNT_MANTRA_USD \
+      --rpc-url $MANTRA_EVM_NODE \
+      --account $WALLET_ACCOUNT_NAME --chain $MANTRA_CHAIN_ID_EVM
+    ```
+  </Step>
+  <Step title="Wrap (depositFor) mantraUSD into wmantraUSD">
+    `depositFor` requires the destination as a hex (`0x`) address. Convert your `nvnm1...` bech32 address to hex using either binary:
+
+    ```bash
+    HEX_ADDRESS=$(nvnmchaind q evm bech32-to-0x $NVNM_ADDRESS)
+    # or: HEX_ADDRESS=$(mantrachaind q evm bech32-to-0x <your_mantra_bech32_address>)
+
+    # AMOUNT_MANTRA_USD uses 6 decimals (mantraUSD on MANTRA Chain)
+    cast send $WRAPPED_MANTRA_USD_ADDRESS "depositFor(address,uint256)" \
+      $HEX_ADDRESS $AMOUNT_MANTRA_USD \
+      --rpc-url $MANTRA_EVM_NODE \
+      --account $WALLET_ACCOUNT_NAME --chain $MANTRA_CHAIN_ID_EVM
+    ```
+  </Step>
+</Steps>
+
+## Step 3 — Convert ERC20 to IBC denom on MANTRA Chain
+
+Convert the wrapped ERC20 balance into the Cosmos-side IBC denom so it can be transferred over IBC.
+
+```bash
+mantrachaind tx erc20 convert-erc20 \
+  $WRAPPED_MANTRA_USD_ADDRESS $AMOUNT_WMANTRA_USD \
+  --from $WALLET_ACCOUNT_NAME \
+  --yes --chain-id $MANTRA_CHAIN_ID \
+  --gas auto --gas-adjustment 2 \
+  --gas-prices 40000000000amantra \
+  --node $MANTRA_RPC_NODE
+```
+
+## Step 4 — IBC transfer to NVNM Chain
+
+Send the wrapped denom from MANTRA Chain to your NVNM Chain address over the IBC transfer channel.
+
+```bash
+mantrachaind tx ibc-transfer transfer transfer $MANTRA_NVNM_IBC_CHANNEL \
+  $NVNM_ADDRESS \
+  ${AMOUNT_WMANTRA_USD}${WRAPPED_MANTRA_USD_DENOM} \
+  --from $WALLET_ACCOUNT_NAME \
+  --yes --chain-id $MANTRA_CHAIN_ID \
+  --gas auto --gas-adjustment 2 \
+  --gas-prices 40000000000amantra \
+  --node $MANTRA_RPC_NODE
+```
+
+<Note>
+  The MANTRA-side transfer channel is `channel-13` on `mantra-dukong-1` (testnet) and `channel-9` on `mantra-1` (mainnet). On NVNM Chain, the corresponding channel is `channel-1`.
+</Note>
+
+## Verify your balance
+
+Query your NVNM Chain bank balance for the IBC denom:
+
+```bash
+nvnmchaind query bank balance \
+  $NVNM_ADDRESS \
+  $CONSUMER_DENOM \
+  --node $NVNM_RPC_NODE
+```
+
+Expected output:
+
+```yaml
+balance:
+  amount: "<value of AMOUNT_WMANTRA_USD>"
+  denom: ibc/00E24F149F01782E2C423BDB114C98D6C657DFC583124389192187BF8DC3A1AD
+```
+## Additional References
+
+### Gas token reference
+
+The gas token on NVNM Chain is **wmantraUSD** — a wrapped version of `mantraUSD` bridged from MANTRA Chain via IBC.
+
+| Field | Value (testnet) |
+| --- | --- |
+| Display name | `wmantraUSD` |
+| IBC denom (on `nvnm-testnet-1`) | `ibc/00E24F149F01782E2C423BDB114C98D6C657DFC583124389192187BF8DC3A1AD` |
+| IBC path | `transfer/channel-1/erc20:0x36A28B8C8FFD00bEE440dB8273D57451FBeAf767` |
+| EVM decimals | 18 |
+| Min gas price | `40000000000 ibc/00E24F149F01782E2C423BDB114C98D6C657DFC583124389192187BF8DC3A1AD` |
+
+### Useful links
+
+| Resource | Testnet | Mainnet |
+| --- | --- | --- |
+| Provider chain RPC | `https://rpc.dukong.mantrachain.io` | `https://rpc.mantrachain.io` |
+| Provider EVM RPC | `https://evm.dukong.mantrachain.io` | `https://evm.mantrachain.io` |
+| NVNM Chain RPC | `https://rpc.testnet.nvnmchain.io` | `https://rpc.nvnmchain.io` |
+| NVNM Chain EVM RPC | `https://evm.testnet.nvnmchain.io` | `https://evm.nvnmchain.io` |
+| Swagger / REST docs | `https://api.testnet.nvnmchain.io/swagger/` | `https://api.nvnmchain.io/swagger/` |
+| wmantraUSD faucet | [faucet.testnet.nvnmchain.io](https://faucet.testnet.nvnmchain.io) | — |
+
+See [Network Details](/resources/network-details) for full endpoint and explorer details, and [Acquiring mantraUSD](/resources/acquiring-mantrausd) for ways to acquire `mantraUSD` on MANTRA Chain.
