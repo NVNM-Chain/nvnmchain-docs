@@ -13,7 +13,30 @@ This guide walks you through installing Rabby Wallet and adding the NVNM Chain n
 
 <Steps>
   <Step title="Install Rabby">
-    Navigate to [https://rabby.io](https://rabby.io) and install the Rabby extension for your browser (Chrome and Brave are supported).
+    1. Visit [https://rabby.io](https://rabby.io).
+    2. Hit the download button for **Chrome**. You will be directed to the Chrome Web Store.
+
+        <Frame>
+          ![Rabby website download for Chrome button](/images/rabbysetup/hitdownlioadforchrome.png)
+        </Frame>
+
+    3. Click **Add to Chrome**.
+
+        <Frame>
+          ![Google Chrome add Rabby extension](/images/rabbysetup/addchrome.png)
+        </Frame>
+
+    4. On the pop up, click **Add extension**.
+
+        <Frame>
+          ![Google Chrome add Rabby extension confirm](/images/rabbysetup/addext.png)
+        </Frame>
+
+    5. After adding the Rabby extension, Rabby will automatically open. You can also make sure it's easily accessible in your toolbar by clicking the jigsaw icon in the top-right of the screen, and hitting the pin icon.
+
+        <Frame>
+          ![Google Chrome pin Rabby extension](/images/rabbysetup/pinit.png)
+        </Frame>
 
     <Warning>
       Only install Rabby from the official site at [rabby.io](https://rabby.io) or directly from the Chrome Web Store. Avoid third-party download links.
@@ -37,32 +60,42 @@ This guide walks you through installing Rabby Wallet and adding the NVNM Chain n
 ## Add NVNM Testnet to Rabby
 
 <Steps>
-  <Step title="Open More Chains">
-    In the Rabby extension, click the chain selector (top-left, showing your current network). Select **More chains** at the bottom of the list to open the full chain browser.
+  <Step title="Open Settings">
+    Click the **settings gear** icon in the top-right of the Rabby extension.
+
+    <Frame>
+      ![Rabby extension home screen](/images/rabbysetup/settings.png)
+    </Frame>
   </Step>
 
-  <Step title="Search for NVNM Testnet">
-    Use the search bar to look for `NVNM`. If it appears, click **Add** to enable it in your chain list.
+  <Step title="Add Custom Network">
+    In Settings, click **Add Custom Network**.
 
-    If it does not appear, proceed to add it manually in the next step.
+    <Frame>
+      ![Rabby settings Add Custom Network option](/images/rabbysetup/addcustomnetwork.png)
+    </Frame>
+
+    On the next screen, click **Add Custom Network** again.
+
+    <Frame>
+      ![Rabby Add Custom Network screen](/images/rabbysetup/addcustomnetwork2.png)
+    </Frame>
   </Step>
 
-  <Step title="Add the network manually (if needed)">
-    If NVNM Testnet is not listed, open **Settings → Custom RPC** and add the network with these details:
+  <Step title="Enter network details and confirm">
+    Fill in the following details, then click **Confirm**.
 
     | Parameter | Value |
     | --- | --- |
+    | Chain ID | `787111` |
     | Network Name | `NVNM Testnet` |
     | RPC URL | `https://evm.testnet.nvnmchain.io` |
-    | Chain ID | `787111` |
     | Currency Symbol | `NVNM` |
     | Block Explorer URL | `https://explorer.evm.testnet.nvnmchain.io` |
 
-    Click **Confirm** to save the network.
-  </Step>
-
-  <Step title="Switch to NVNM Testnet">
-    Select **NVNM Testnet** from the chain selector. Your wallet is now connected to the NVNM Chain testnet.
+    <Frame>
+      ![Rabby Add Custom Network form filled with NVNM Testnet details](/images/rabbysetup/adddataandconfirm.png)
+    </Frame>
   </Step>
 </Steps>
 
@@ -71,35 +104,41 @@ This guide walks you through installing Rabby Wallet and adding the NVNM Chain n
 ## Add NVNM Mainnet to Rabby
 
 <Steps>
-  <Step title="Open More Chains">
-    In the Rabby extension, click the chain selector (top-left, showing your current network). Select **More chains** at the bottom of the list to open the full chain browser.
+  <Step title="Open Settings">
+    Click the **settings gear** icon in the top-right of the Rabby extension.
+
+    <Frame>
+      ![Rabby extension home screen](/images/rabbysetup/settings.png)
+    </Frame>
   </Step>
 
-  <Step title="Search for NVNM Mainnet">
-    Use the search bar to look for `NVNM`. If **NVNM Mainnet** appears, click **Add** to enable it in your chain list.
+  <Step title="Add Custom Network">
+    In Settings, click **Add Custom Network**.
 
-    If it does not appear, proceed to add it manually in the next step.
+    <Frame>
+      ![Rabby settings Add Custom Network option](/images/rabbysetup/addcustomnetwork.png)
+    </Frame>
+
+    On the next screen, click **Add Custom Network** again.
+
+    <Frame>
+      ![Rabby Add Custom Network screen](/images/rabbysetup/addcustomnetwork2.png)
+    </Frame>
   </Step>
 
-  <Step title="Add the network manually (if needed)">
-    If NVNM Mainnet is not listed, open **Settings → Custom RPC** and add the network with these details:
+  <Step title="Enter network details and confirm">
+    Fill in the following details, then click **Confirm**.
 
     | Parameter | Value |
     | --- | --- |
+    | Chain ID | `1611` |
     | Network Name | `NVNM Mainnet` |
     | RPC URL | `https://evm.nvnmchain.io` |
-    | Chain ID | `1611` |
     | Currency Symbol | `NVNM` |
     | Block Explorer URL | `https://evm.explorer.nvnmchain.io` |
 
-    Click **Confirm** to save the network.
-  </Step>
-
-  <Step title="Switch to NVNM Mainnet">
-    Select **NVNM Mainnet** from the chain selector. Your wallet is now connected to NVNM Chain mainnet.
+    <Frame>
+      ![Rabby Add Custom Network form filled with NVNM Mainnet details](/images/rabbysetup/adddataandconfirmmainnet.png)
+    </Frame>
   </Step>
 </Steps>
-
-<Tip>
-  Once NVNM Chain mainnet launches, follow the [connect wallets to mainnet](/docs/getting-started/how-to-connect-wallets-to-mainnet) guide to add the mainnet network.
-</Tip>

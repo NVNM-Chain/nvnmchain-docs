@@ -13,7 +13,31 @@ This guide walks you through installing MetaMask and adding the NVNM Chain netwo
 
 <Steps>
   <Step title="Install MetaMask">
-    Navigate to [https://metamask.io/download](https://metamask.io/download) and install the MetaMask extension for your browser (Chrome, Firefox, Brave, or Edge are supported).
+    1. Visit [https://metamask.io/](https://metamask.io/).
+    2. Hit **Get MetaMask** in the menu bar.
+
+        <Frame>
+          ![MetaMask website Get MetaMask button](/images/metamasksetup/hit_GetMetaMask.png)
+        </Frame>
+
+    3. Click **Chrome**. You will be directed to the Chrome Web Store.
+    4. Click **Add to Chrome**.
+
+        <Frame>
+          ![Google Chrome add MetaMask extension](/images/metamasksetup/addtochrome.png)
+        </Frame>
+
+    5. On the pop up, click **Add extension**.
+
+        <Frame>
+          ![Google Chrome add MetaMask extension confirm](/images/metamasksetup/addextension.png)
+        </Frame>
+
+    6. After adding the MetaMask extension, MetaMask will automatically open. You can also make sure it's easily accessible in your toolbar by clicking the jigsaw icon in the top-right of the screen, and hitting the pin icon.
+
+        <Frame>
+          ![Google Chrome pin MetaMask extension](/images/metamasksetup/pinextension.png)
+        </Frame>
 
     <Warning>
       Only install MetaMask from the official site or your browser's extension store. Avoid third-party download links.
@@ -37,26 +61,42 @@ This guide walks you through installing MetaMask and adding the NVNM Chain netwo
 ## Add NVNM Testnet to MetaMask
 
 <Steps>
-  <Step title="Open network settings">
-    Click the network dropdown at the top of the MetaMask extension, then select **Add a custom network**.
+  <Step title="Open the menu">
+    Click the **hamburger menu** (three lines) in the top-right of the MetaMask extension.
+
+    <Frame>
+      ![MetaMask extension home screen](/images/metamasksetup/settings.png)
+    </Frame>
   </Step>
 
-  <Step title="Enter network details">
-    Fill in the following details:
+  <Step title="Go to Networks">
+    Select **Networks** from the menu.
+
+    <Frame>
+      ![MetaMask menu with Networks option](/images/metamasksetup/networks.png)
+    </Frame>
+
+    Then click **+ Add a custom network**.
+
+    <Frame>
+      ![MetaMask Manage networks screen](/images/metamasksetup/addcustomnetwork.png)
+    </Frame>
+  </Step>
+
+  <Step title="Enter network details and save">
+    Fill in the following details, then click **Save**.
 
     | Parameter | Value |
     | --- | --- |
     | Network Name | `NVNM Testnet` |
-    | RPC URL | `https://evm.testnet.nvnmchain.io` |
+    | Default RPC URL | `https://evm.testnet.nvnmchain.io` |
     | Chain ID | `787111` |
     | Currency Symbol | `NVNM` |
     | Block Explorer URL | `https://explorer.evm.testnet.nvnmchain.io` |
 
-    Click **Save** to add the network.
-  </Step>
-
-  <Step title="Switch to NVNM Testnet">
-    Select **NVNM Testnet** from the network dropdown. Your wallet is now connected to the NVNM Chain testnet.
+    <Frame>
+      ![MetaMask Add network form filled with NVNM Testnet details](/images/metamasksetup/testnetdataandsave.png)
+    </Frame>
   </Step>
 </Steps>
 
@@ -65,29 +105,41 @@ This guide walks you through installing MetaMask and adding the NVNM Chain netwo
 ## Add NVNM Mainnet to MetaMask
 
 <Steps>
-  <Step title="Open network settings">
-    Click the network dropdown at the top of the MetaMask extension, then select **Add a custom network**.
+  <Step title="Open the menu">
+    Click the **hamburger menu** (three lines) in the top-right of the MetaMask extension.
+
+    <Frame>
+      ![MetaMask extension home screen](/images/metamasksetup/settings.png)
+    </Frame>
   </Step>
 
-  <Step title="Enter network details">
-    Fill in the following details:
+  <Step title="Go to Networks">
+    Select **Networks** from the menu.
+
+    <Frame>
+      ![MetaMask menu with Networks option](/images/metamasksetup/networks.png)
+    </Frame>
+
+    Then click **+ Add a custom network**.
+
+    <Frame>
+      ![MetaMask Manage networks screen](/images/metamasksetup/addcustomnetwork.png)
+    </Frame>
+  </Step>
+
+  <Step title="Enter network details and save">
+    Fill in the following details, then click **Save**.
 
     | Parameter | Value |
     | --- | --- |
     | Network Name | `NVNM Mainnet` |
-    | RPC URL | `https://evm.nvnmchain.io` |
+    | Default RPC URL | `https://evm.nvnmchain.io` |
     | Chain ID | `1611` |
     | Currency Symbol | `NVNM` |
     | Block Explorer URL | `https://evm.explorer.nvnmchain.io` |
 
-    Click **Save** to add the network.
-  </Step>
-
-  <Step title="Switch to NVNM Mainnet">
-    Select **NVNM Mainnet** from the network dropdown. Your wallet is now connected to NVNM Chain mainnet.
+    <Frame>
+      ![MetaMask Add network form filled with NVNM Mainnet details](/images/metamasksetup/mainnetdataandsave.png)
+    </Frame>
   </Step>
 </Steps>
-
-<Tip>
-  Once NVNM Chain mainnet launches, follow the [connect wallets to mainnet](/docs/getting-started/how-to-connect-wallets-to-mainnet) guide to add the mainnet network.
-</Tip>
