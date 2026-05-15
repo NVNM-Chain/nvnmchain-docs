@@ -19,6 +19,8 @@
     "operators/node-setup-and-deployment/validator-nodes/running-a-node",
     "operators/node-setup-and-deployment/validator-nodes/becoming-a-validator",
     "operators/node-setup-and-deployment/validator-nodes/configuring-systemd-service",
+    "---Custom Modules---",
+    "modules/anchoring-module",
     "---Reference---",
     "resources/network-details",
     "resources/chain-parameters",
