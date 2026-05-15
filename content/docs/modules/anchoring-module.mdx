@@ -1,22 +1,25 @@
 ---
 title: "Anchoring Module"
 description: >-
-  EVM precompile for the Anchoring module — manage registries, records, and role-based access from Solidity or any EVM client.
+  Native cosmos module, extended with EVM-compatible precompile: Anchoring module is used to manage registries, records, and role-based access.
 ---
 
-The Anchoring module is a custom Cosmos SDK module exposed to the EVM through a precompiled contract. It allows both Cosmos and EVM callers to create registries, anchor off-chain artifacts (documents, files, data) on-chain via checksummed records, and manage access through a role-based permission system.
+The Anchoring module is a custom Cosmos SDK module exposed to EVM through a precompiled contract. It allows both Cosmos and EVM callers to create registries, anchor off-chain artifacts (documents, files, data) on-chain via checksummed records, and manage access through a role-based permission system.
 
-**Precompile Address:** `0x0000000000000000000000000000000000000A00`
-
-## Core Concepts
+# Core Concepts
 
 - **Registry** — A named container for records. Any user can create one and automatically becomes its admin.
 - **Record** — An anchored reference to off-chain data, identified by a checksum. Records are versioned: submitting the same checksum to the same registry increments the version while preserving the `recordId`.
 - **Roles** — Two roles govern access: `admin` (full control, can grant/revoke roles) and `editor` (can add records and update status).
 
-## Functions
+<Info>
+**Precompile Address:** `0x0000000000000000000000000000000000000A00`
+</Info>
 
-### Transactions
+
+# Functions
+
+## Transactions
 
 | Function | Description |
 | --- | --- |
@@ -26,7 +29,7 @@ The Anchoring module is a custom Cosmos SDK module exposed to the EVM through a 
 | `grantRole(uint64 registryId, string checksum, address account, string role)` | Grants a role to an address. Pass an empty `checksum` for registry-level scope. |
 | `revokeRole(uint64 registryId, string checksum, address account, string role)` | Revokes a role from an address. |
 
-### Queries
+## Queries
 
 | Function | Description |
 | --- | --- |
@@ -106,9 +109,9 @@ The module uses hierarchical role-based access control. When a permission check 
 
 Record-level roles take precedence over registry-level roles. A user with `editor` at the registry level but `admin` on a specific record will have admin permissions for that record only.
 
-## Usage Examples
+# Usage Examples (EVM)
 
-### Creating a Registry
+## Creating a Registry
 
 ```python
 DOCUMENT_PRECOMPILE = ContractAsync.from_abi(DOCUMENT_PRECOMPILE_ABI)
@@ -120,7 +123,7 @@ receipt = await DOCUMENT_PRECOMPILE.fns.addRegistry(
 ).transact(w3, admin_account, to=DOCUMENT_ADDRESS, gas=100_000)
 ```
 
-### Adding a Record
+## Adding a Record
 
 ```python
 record = (
@@ -141,7 +144,7 @@ receipt = await DOCUMENT_PRECOMPILE.fns.addRecord(record).transact(
 )
 ```
 
-### Querying Records
+## Querying Records
 
 ```python
 pagination = (b"", 0, 100, False, False)
@@ -155,7 +158,7 @@ records, page_response = await DOCUMENT_PRECOMPILE.fns.records(
 ).call(w3, to=DOCUMENT_ADDRESS)
 ```
 
-### Granting a Role
+## Granting a Role
 
 ```python
 # Grant registry-level editor role (empty checksum = registry scope)
@@ -173,6 +176,58 @@ await DOCUMENT_PRECOMPILE.fns.grantRole(
     user_address,
     "admin"
 ).transact(w3, admin_account, to=DOCUMENT_ADDRESS)
+```
+
+# Usage Example (COSMOS TX)
+
+```jsonc
+{
+    "body": {
+        "messages": [
+            {
+                "@type": "/nvnmchain.anchoring.v1.MsgAddRegistry",
+                "sender": "<WALLET_ADDRESS>",
+                "name": "<NAME OF REGISTRY>",
+                "description": "<DESCRIPTION>",
+                "metadata": "{\"owner\":\"NVNM Foundation\", \"purpose\":\"Protocol Documentation\", \"website\":\"https://nvnmchain.io\"}" // Customisable metadata json structure
+            },
+            {
+                "@type": "/nvnmchain.anchoring.v1.MsgAddRecord",
+                "sender": "<WALLET_ADDRESS>",
+                "record": {
+                    "registry": "<NAME OF REGISTRY>",
+                    "uri": "<IPFS or other URL RECORD>",
+                    "checksum": "<SHA256SUM RECOMMENDED>",
+                    "checksum_algo": "sha256",
+                    "metadata": "{\"version\":\"1.0\",\"title\":\"NVNM Chain Whitepaper\",\"author\":\"Albert Berdellans\",\"organization\":\"NVNM Labs\",\"date\":\"May 2026\",\"summary\":\"Accountability infrastructure for agentic activity\"}",
+                    "status": "active"
+                }
+            }
+        ],
+        "memo": "Anchoring the initial May 2026 NVNM Chain Whitepaper authored by Inveniam.",
+        "timeout_height": "0",
+        "unordered": false,
+        "timeout_timestamp": null,
+        "extension_options": [],
+        "non_critical_extension_options": []
+    },
+    "auth_info": {
+        "signer_infos": [],
+        "fee": {
+            "amount": [
+                {
+                    "denom": "ibc/93575DF9D4BC5B2C85D967DE020E5DEA1863FDD108AD509A36DA6C83E3398227",
+                    "amount": "0"
+                }
+            ],
+            "gas_limit": "3000000",
+            "payer": "",
+            "granter": ""
+        },
+        "tip": null
+    },
+    "signatures": []
+}
 ```
 
 ## Error Handling
