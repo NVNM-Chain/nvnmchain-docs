@@ -1,6 +1,6 @@
 ---
 title: "Bridging mantraUSD to NVNM Chain"
-description: "How to bridge mantraUSD from MANTRA Chain to NVNM Chain as wmantraUSD — the gas token for NVNM Chain. Covers testnet (nvnm-testnet-1) and mainnet (nvnm-1) flows."
+description: "How to bridge mantraUSD from MANTRA Chain to NVNM Chain as wmantraUSD - the gas token for NVNM Chain. Covers testnet (nvnm-testnet-1) and mainnet (nvnm-1) flows."
 icon: "right-left"
 ---
 
@@ -8,7 +8,7 @@ icon: "right-left"
   **NVNM Chain** is a CCV consumer chain of **MANTRA Chain**. The gas token on NVNM Chain is **wmantraUSD**, bridged from the provider chain via IBC. There is no standalone bridge UI — tokens are obtained by wrapping `mantraUSD` on MANTRA Chain and IBC-transferring the wrapped denom (`wmantraUSD`) to your NVNM Chain address.
 </Info>
 
-Tokens are obtained by wrapping `mantraUSD` (`mmUSD → wmmUSD`) on the parent MANTRA Chain (`mantra-dukong-1` for testnet, `mantra-1` for mainnet) and IBC-transferring to your NVNM Chain address (`nvnm-testnet-1` or `nvnm-1`).
+Tokens are obtained by wrapping `mantraUSD` (`mantraUSD → wmantraUSD`) on the parent MANTRA Chain (`mantra-dukong-1` for testnet, `mantra-1` for mainnet) and IBC-transferring to your NVNM Chain address (`nvnm-testnet-1` or `nvnm-1`).
 
 ## Prerequisites
 
@@ -48,7 +48,7 @@ To add NVNM Chain to MetaMask or any EVM wallet, use the network configuration b
 | Network Name | `NVNM Chain` | `NVNM Chain` |
 | RPC URL | `https://evm.testnet.nvnmchain.io` | `https://evm.nvnmchain.io` |
 | Chain ID | `787111` | `1611` |
-| Currency Symbol | `mmUSD` | `mmUSD` |
+| Currency Symbol | `mantraUSD` | `mantraUSD` |
 | Block Explorer | `https://explorer.evm.testnet.nvnmchain.io` | `https://evm.explorer.nvnmchain.io` |
 
 ## Step 1 — Set environment variables
@@ -262,6 +262,6 @@ The gas token on NVNM Chain is **wmantraUSD** — a wrapped version of `mantraUS
 | NVNM Chain RPC | `https://rpc.testnet.nvnmchain.io` | `https://rpc.nvnmchain.io` |
 | NVNM Chain EVM RPC | `https://evm.testnet.nvnmchain.io` | `https://evm.nvnmchain.io` |
 | Swagger / REST docs | `https://api.testnet.nvnmchain.io/swagger/` | `https://api.nvnmchain.io/swagger/` |
-| wmantraUSD faucet | [faucet.testnet.nvnmchain.io](https://faucet.testnet.nvnmchain.io) | — |
+| mantraUSD faucet | [faucet.testnet.nvnmchain.io](https://faucet.testnet.nvnmchain.io) | — |
 
 See [Network Details](/resources/network-details) for full endpoint and explorer details, and [Acquiring mantraUSD](/resources/acquiring-mantrausd) for ways to acquire `mantraUSD` on MANTRA Chain.
