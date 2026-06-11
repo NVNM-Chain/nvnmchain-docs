@@ -10,7 +10,7 @@ export const siteConfig = {
     height: 40,
   },
   links: {
-    github: 'https://github.com/nvnm-chain',
+    github: 'https://github.com/NVNM-Chain/nvnmchain',
     twitter: 'https://x.com/nvnmchain',
     linkedin: 'https://linkedin.com/company/inveniam',
     support: 'mailto:contact@nvnmchain.io',
@@ -20,7 +20,7 @@ export const siteConfig = {
     links: [
       { label: 'Inveniam', href: 'https://inveniam.io' },
       { label: 'Inveniam Hub', href: 'https://hub.inveniam.io' },
-      { label: 'GitHub', href: 'https://github.com/nvnm-chain' },
+      { label: 'GitHub', href: 'https://github.com/NVNM-Chain/nvnmchain' },
     ],
   },
   navbar: {
