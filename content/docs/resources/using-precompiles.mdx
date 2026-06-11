@@ -31,81 +31,25 @@ These precompiles behave exactly as they do on Ethereum and other EVM chains, en
 
 ## Additional Cosmos SDK Precompiles
 
-In addition to all standard EVM precompiles, MANTRA Chain exposes **additional precompiles that let developers interact with the CosmWasm (CW) side of the chain**. These precompiles enable seamless integration between EVM contracts and Cosmos SDK modules.
+In addition to all standard EVM precompiles, NVNM Chain exposes **additional stateful precompiles** that let developers interact with selected Cosmos SDK modules and NVNM-specific functionality from Solidity.
 
-The EVM communicates with the Cosmos part of the chain through these precompiles - Go code that directly interacts with other module states (e.g., Bank module).
+The EVM communicates with the Cosmos side of the chain through these precompiles - native Go code that directly interacts with module state (for example, the Bank module).
 
-Precompiles are special contract addresses that execute native Go code instead of EVM bytecode, enabling seamless integration between EVM and Cosmos SDK modules.
+### Active NVNM Precompiles
 
-### Cosmos SDK Precompiles
+The following **5 stateful precompiles** are currently active on NVNM Chain:
 
-There are **5 Cosmos SDK precompiles** exposed inside the EVM:
+| Precompile | Address | What it does |
+| --- | --- | --- |
+| ICS20 (IBC Transfer) | `0x0000000000000000000000000000000000000802` | Initiate IBC token transfers from EVM contracts |
+| Bank | `0x0000000000000000000000000000000000000804` | Send native tokens and query balances |
+| Governance | `0x0000000000000000000000000000000000000805` | Submit and vote on governance proposals |
+| Slashing | `0x0000000000000000000000000000000000000806` | Query slashing-related state from the EVM |
+| Anchoring | `0x0000000000000000000000000000000000000A00` | Create and manage on-chain anchoring records |
 
-#### 1. Staking Precompile
-
-Interact with the staking module directly from EVM contracts:
-
-- **Delegate tokens**: Delegate native tokens to validators
-- **Undelegate tokens**: Undelegate from validators
-- **Redelegate tokens**: Move delegation between validators
-- **Query delegation information**: Get delegation details
-
-**Use Cases:**
-- Automated staking strategies
-- Liquid staking protocols
-- Validator selection algorithms
-
-#### 2. Distribution Precompile
-
-Manage staking rewards from EVM contracts:
-
-- **Claim rewards**: Claim staking rewards
-- **Withdraw rewards**: Withdraw accumulated rewards
-- **Query reward information**: Get reward details
-
-**Use Cases:**
-- Automated reward claiming
-- Reward distribution protocols
-- Staking aggregators
-
-#### 3. Slashing Precompile
-
-Handle slashing operations and re-staking:
-
-- **Re-staking operations**: Manage validator re-staking
-- **Reward management**: Handle slashing-related rewards
-- **Validator penalties**: Query and handle penalties
-
-**Use Cases:**
-- Slashing protection protocols
-- Validator health monitoring
-- Risk management systems
-
-#### 4. Governance Precompile
-
-Participate in on-chain governance from EVM contracts:
-
-- **Vote on proposals**: Cast votes on governance proposals
-- **Create proposals**: Submit new governance proposals
-- **Query proposal information**: Get proposal details and status
-
-**Use Cases:**
-- Automated governance participation
-- Governance aggregators
-- Proposal creation tools
-
-#### 5. Bank Precompile
-
-Transfer native Cosmos tokens from EVM contracts:
-
-- **Transfer tokens**: Send native tokens
-- **Query balances**: Get token balances
-- **Multi-send operations**: Batch token transfers
-
-**Use Cases:**
-- Token bridges
-- Payment protocols
-- Multi-sig wallets
+<Note>
+Staking (`0x800`) and distribution (`0x801`) precompiles are not available on NVNM Chain. Those operations remain on the MANTRA L1 provider chain.
+</Note>
 
 ### ERC20 Precompiles
 
@@ -119,15 +63,15 @@ This enables TokenFactory tokens (created via Cosmos SDK) to be used directly in
 
 ## Precompile Addresses
 
-The following precompile addresses are fixed on MANTRA Chain and can be used directly in your Solidity contracts:
+The following precompile addresses are fixed on NVNM Chain and can be used directly in your Solidity contracts:
 
 ```solidity
-// Cosmos SDK Precompile Addresses
-address constant STAKING_PRECOMPILE = 0x0000000000000000000000000000000000000800;
-address constant DISTRIBUTION_PRECOMPILE = 0x0000000000000000000000000000000000000801;
-address constant SLASHING_PRECOMPILE = 0x0000000000000000000000000000000000000802;
-address constant GOVERNANCE_PRECOMPILE = 0x0000000000000000000000000000000000000803;
+// NVNM Stateful Precompile Addresses
+address constant ICS20_PRECOMPILE = 0x0000000000000000000000000000000000000802;
 address constant BANK_PRECOMPILE = 0x0000000000000000000000000000000000000804;
+address constant GOVERNANCE_PRECOMPILE = 0x0000000000000000000000000000000000000805;
+address constant SLASHING_PRECOMPILE = 0x0000000000000000000000000000000000000806;
+address constant ANCHORING_PRECOMPILE = 0x0000000000000000000000000000000000000A00;
 ```
 
 <Note>
@@ -145,34 +89,9 @@ Precompiles are called like regular contract calls:
 IPrecompileInterface(precompileAddress).functionName(params);
 ```
 
-### Example: Staking Precompile
-
-```solidity
-// SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
-
-interface IStakingPrecompile {
-    function delegate(address validator, uint256 amount) external returns (bool);
-    function undelegate(address validator, uint256 amount) external returns (bool);
-    function redelegate(
-        address validatorSrc,
-        address validatorDst,
-        uint256 amount
-    ) external returns (bool);
-}
-
-contract StakingContract {
-    address constant STAKING_PRECOMPILE = 0x0000000000000000000000000000000000000800;
-    
-    function delegateToValidator(address validator, uint256 amount) external {
-        IStakingPrecompile(STAKING_PRECOMPILE).delegate(validator, amount);
-    }
-    
-    function undelegateFromValidator(address validator, uint256 amount) external {
-        IStakingPrecompile(STAKING_PRECOMPILE).undelegate(validator, amount);
-    }
-}
-```
+<Note>
+If your application needs staking or reward-distribution flows, call those on the MANTRA L1 provider chain rather than through an NVNM precompile.
+</Note>
 
 ### Example: Bank Precompile
 
@@ -227,7 +146,7 @@ interface IGovernancePrecompile {
 }
 
 contract GovernanceContract {
-    address constant GOVERNANCE_PRECOMPILE = 0x0000000000000000000000000000000000000803;
+    address constant GOVERNANCE_PRECOMPILE = 0x0000000000000000000000000000000000000805;
     
     function voteOnProposal(uint256 proposalId, uint8 option) external {
         IGovernancePrecompile(GOVERNANCE_PRECOMPILE).vote(proposalId, option);
@@ -247,12 +166,16 @@ interface ITokenFactoryERC20 {
 }
 
 contract TokenContract {
-    // Precompile address for a specific TokenFactory token
-    // Address is deterministic based on token denom
-    address constant TOKEN_PRECOMPILE = 0x0000000000000000000000000000000000000805;
+    // Precompile address for a specific TokenFactory token.
+    // This address is deterministic based on the token denom.
+    address immutable tokenPrecompile;
+
+    constructor(address tokenPrecompile_) {
+        tokenPrecompile = tokenPrecompile_;
+    }
     
     function transferToken(address to, uint256 amount) external {
-        ITokenFactoryERC20(TOKEN_PRECOMPILE).transfer(to, amount);
+        ITokenFactoryERC20(tokenPrecompile).transfer(to, amount);
     }
 }
 ```
@@ -288,4 +211,3 @@ Precompiles execute native Go code, which is generally more gas-efficient than c
 - Learn more about [Cosmos precompiles architecture](/developers/architecture/cosmos-precompiles)
 - Understand [transaction sequencing](/developers/architecture/transaction-sequencing)
 - Explore [EVM development guides](/developers/evm/getting-started)
-

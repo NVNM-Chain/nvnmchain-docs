@@ -137,7 +137,7 @@ CONFIG_TOML="$HOME/.nvnmchain/config/config.toml"
 APP_TOML="$HOME/.nvnmchain/config/app.toml"
 PERSISTENT_PEERS="" # Can be empty. Fill this one if you need to connect to particular peers
 SEEDS="7e061edecef73a700b699c785f61a44ca981ff7f@34.150.103.79:26656"
-sed -i.bak -e "s/^minimum-gas-prices *=.*/minimum-gas-prices = \"0.01uom\"/g" $APP_TOML
+sed -i.bak -e "s/^minimum-gas-prices *=.*/minimum-gas-prices = \"40000000000wmantraUSD\"/g" $APP_TOML
 sed -i.bak -e "s/^persistent_peers *=.*/persistent_peers = \"$PERSISTENT_PEERS\"/" $CONFIG_TOML
 sed -i.bak -e "s/^seeds =.*/seeds = \"$SEEDS\"/" $CONFIG_TOML
 external_address=$(wget -qO- eth0.me)
