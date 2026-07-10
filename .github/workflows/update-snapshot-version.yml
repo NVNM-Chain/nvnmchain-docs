@@ -1,0 +1,316 @@
+name: Update Snapshot Version
+
+on:
+  schedule:
+    - cron: '0 8 * * *'  # 15:00 ICT (UTC+7)
+  workflow_dispatch:
+
+# NVNM Chain snapshots live in a single R2 bucket (nvnmchain-snapshot) that is
+# exposed through TWO separate Cloudflare zones / custom domains:
+#   - mainnet: snapshots.mainnet.nvnmchain.io  (zone mainnet.nvnmchain.io)
+#   - testnet: snapshots.testnet.nvnmchain.io  (zone testnet.nvnmchain.io)
+#
+# Each network therefore has its own zone_id + ruleset_id, and each redirect
+# rule its own rule_id. Those IDs are supplied via GitHub repository VARIABLES.
+#
+# NOTE ON NAMING: the public "latest" alias for full nodes is
+#   <chain>_goleveldb_fullnode_latest.tar.lz4
+# but the actual snapshot objects in R2 are stored as
+#   <chain>_goleveldb_sentry_<height>.tar.lz4
+# So for full nodes we list the bucket / build the redirect target using the
+# "sentry" object token, while the rule expression and docs alias keep "fullnode".
+# Archive snapshots use "archive" for both the alias and the stored object.
+#
+# Required GitHub repository VARIABLES (Settings > Secrets and variables > Actions > Variables):
+#   S3_BUCKET_ENDPOINT              e.g. https://2ff8e4962cfd414617e13d4c503e09ae.r2.cloudflarestorage.com
+#   CF_MAINNET_ZONE_ID             zone id of mainnet.nvnmchain.io
+#   CF_MAINNET_RULESET_ID          http_request_dynamic_redirect ruleset id for the mainnet zone
+#   CF_MAINNET_FULLNODE_RULE_ID    rule id of nvnm-1_goleveldb_fullnode
+#   CF_MAINNET_ARCHIVE_RULE_ID     rule id of nvnm-1_goleveldb_archive
+#   CF_TESTNET_ZONE_ID             zone id of testnet.nvnmchain.io
+#   CF_TESTNET_RULESET_ID          http_request_dynamic_redirect ruleset id for the testnet zone
+#   CF_TESTNET_FULLNODE_RULE_ID    rule id of nvnm-testnet-1_goleveldb_fullnode
+#   CF_TESTNET_ARCHIVE_RULE_ID     rule id of nvnm-testnet-1_goleveldb_archive
+#   GH_APP_ID                      GitHub App id used to open the PR
+# Required GitHub repository SECRETS:
+#   CLOUDFLARE_R2_ACCESS_KEY_ID
+#   CLOUDFLARE_R2_SECRET_ACCESS_KEY
+#   CLOUDFLARE_API_TOKEN                       token with Zone > Config Rules edit on both zones
+#   GH_APP_PRIVATE_KEY
+#   MANTRA_FINANCE_BOT_GPG_PRIVATE_KEY
+#   MANTRA_FINANCE_BOT_GPG_PASSPHRASE
+
+env:
+  REVIEWERS: ""
+  BUCKET_NAME: nvnmchain-snapshot
+  FILE_PATH: content/docs/operators/node-setup-and-deployment/validator-nodes/download-nodes-snapshots.mdx
+  # rule_name -> { network, domain, zone_id, ruleset_id, rule_id }
+  # rule_name format: <chain_id>_<db_type>_<node_type>
+  CLOUDFLARE_RULES: >-
+    {
+      "nvnm-1_goleveldb_fullnode": {
+        "network": "mainnet",
+        "domain": "snapshots.mainnet.nvnmchain.io",
+        "zone_id": "${{ vars.CF_MAINNET_ZONE_ID }}",
+        "ruleset_id": "${{ vars.CF_MAINNET_RULESET_ID }}",
+        "rule_id": "${{ vars.CF_MAINNET_FULLNODE_RULE_ID }}"
+      },
+      "nvnm-1_goleveldb_archive": {
+        "network": "mainnet",
+        "domain": "snapshots.mainnet.nvnmchain.io",
+        "zone_id": "${{ vars.CF_MAINNET_ZONE_ID }}",
+        "ruleset_id": "${{ vars.CF_MAINNET_RULESET_ID }}",
+        "rule_id": "${{ vars.CF_MAINNET_ARCHIVE_RULE_ID }}"
+      },
+      "nvnm-testnet-1_goleveldb_fullnode": {
+        "network": "testnet",
+        "domain": "snapshots.testnet.nvnmchain.io",
+        "zone_id": "${{ vars.CF_TESTNET_ZONE_ID }}",
+        "ruleset_id": "${{ vars.CF_TESTNET_RULESET_ID }}",
+        "rule_id": "${{ vars.CF_TESTNET_FULLNODE_RULE_ID }}"
+      },
+      "nvnm-testnet-1_goleveldb_archive": {
+        "network": "testnet",
+        "domain": "snapshots.testnet.nvnmchain.io",
+        "zone_id": "${{ vars.CF_TESTNET_ZONE_ID }}",
+        "ruleset_id": "${{ vars.CF_TESTNET_RULESET_ID }}",
+        "rule_id": "${{ vars.CF_TESTNET_ARCHIVE_RULE_ID }}"
+      }
+    }
+
+jobs:
+  update-snapshot-version:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Generate GitHub App token
+      id: app-token
+      uses: actions/create-github-app-token@v1
+      with:
+        app-id: ${{ vars.GH_APP_ID }}
+        private-key: ${{ secrets.GH_APP_PRIVATE_KEY }}
+
+    - name: Configure AWS Credentials
+      env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.CLOUDFLARE_R2_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.CLOUDFLARE_R2_SECRET_ACCESS_KEY }}
+      run: |
+        aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID
+        aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY
+        aws configure set region auto
+
+    - name: Update Snapshot Versions and Cloudflare Rules
+      env:
+        S3_BUCKET_ENDPOINT: ${{ vars.S3_BUCKET_ENDPOINT }}
+        CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      run: |
+        set -e  # Exit on any error
+
+        # Map a public node type to the object token stored in R2.
+        # Full nodes are stored as "sentry" objects; archive keeps "archive".
+        object_token_for() {
+            local node_type=$1
+            if [[ "$node_type" == "fullnode" ]]; then
+              echo "sentry"
+            else
+              echo "$node_type"
+            fi
+        }
+
+        # Function to get latest snapshot height
+        # Args: chain_id, object_token (sentry|archive), db_type
+        get_latest_snapshot() {
+            local chain_id=$1
+            local object_token=$2
+            local db_type=$3
+
+          local latest_key
+          latest_key=$(aws s3api list-objects-v2 \
+            --bucket "$BUCKET_NAME" \
+            --endpoint-url "$S3_BUCKET_ENDPOINT" \
+            --prefix "${chain_id}_${db_type}_${object_token}_" \
+            --output json \
+            | jq -r '[.Contents // []
+                | .[]
+                | select(.Key | contains("latest") | not)]
+                | sort_by(.LastModified)
+                | last
+                | .Key // empty')
+
+          if [[ -n "$latest_key" ]]; then
+            local height
+            height=$(echo "$latest_key" | sed -E 's/.*_([0-9]+)\.tar.*/\1/')
+            if [[ "$height" =~ ^[0-9]+$ ]]; then
+              echo "$height"
+              return 0
+            fi
+          fi
+
+          return 1
+        }
+
+        # Function to update markdown height
+        # Uses the PUBLIC alias (node_type) so it matches the URL in the docs.
+        update_markdown_height() {
+            local chain_id=$1
+            local node_type=$2
+            local db_type=$3
+            local height=$4
+
+            local search_pattern="${chain_id}_${db_type}_${node_type}_latest"
+            # First step: Get the line number
+            local line_number=$(grep -nF -m1 "$search_pattern" "$FILE_PATH" | cut -d: -f1)
+
+            echo "Found line number: $line_number for pattern: $search_pattern"
+
+            if [[ -z "$line_number" ]]; then
+                echo "::error::Could not find line matching URL pattern for ${chain_id} ${node_type} ${db_type}"
+                return 1
+            fi
+
+            # Second step: Replace the height number
+            # This will replace the number that appears between "| " and " |" in the Height column
+            sed -i "${line_number}s/| [0-9]\+ *|/| ${height} |/" "$FILE_PATH"
+
+            echo "Updated height for ${chain_id} ${node_type} ${db_type} to ${height} -->"
+            cat "$FILE_PATH" | sed -n "${line_number}p"
+        }
+
+        # Function to update Cloudflare rule
+        # The rule matches the public alias (node_type) and redirects to the
+        # stored object (object_token) at the resolved height.
+        update_cloudflare_rule() {
+            local chain_id=$1
+            local height=$2
+            local db_type=$3
+            local node_type=$4
+            local object_token=$5
+            local domain=$6
+            local zone_id=$7
+            local ruleset_id=$8
+            local rule_id=$9
+
+            local response=$(curl -s -w "\n%{http_code}" -X PATCH \
+                "https://api.cloudflare.com/client/v4/zones/${zone_id}/rulesets/${ruleset_id}/rules/${rule_id}" \
+                -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+                -H "Content-Type: application/json" \
+                -d "{
+                    \"action\": \"redirect\",
+                    \"action_parameters\": {
+                        \"from_value\": {
+                            \"preserve_query_string\": false,
+                            \"status_code\": 301,
+                            \"target_url\": {
+                                \"value\": \"https://${domain}/${chain_id}_${db_type}_${object_token}_${height}.tar.lz4\"
+                            }
+                        }
+                    },
+                    \"description\": \"${chain_id}_${db_type}_${node_type}\",
+                    \"enabled\": true,
+                    \"expression\": \"(http.request.full_uri wildcard r\\\"https://${domain}/${chain_id}_${db_type}_${node_type}_latest.tar.lz4\\\")\"
+                }")
+
+            local http_status=$(echo "$response" | tail -n1)
+            local response_body=$(echo "$response" | sed '$d')
+
+            if [[ "$http_status" != "200" ]]; then
+                echo "::error::Failed to update Cloudflare rule for $chain_id ($db_type $node_type). Status: $http_status, Response: $response_body"
+                return 1
+            fi
+
+            if ! echo "$response_body" | jq -e '.success' > /dev/null; then
+                echo "::error::Cloudflare API returned error for $chain_id ($db_type $node_type): $response_body"
+                return 1
+            fi
+
+            echo "Successfully updated Cloudflare rule for $chain_id ($db_type $node_type) on ${domain}"
+            return 0
+        }
+
+        # Process each Cloudflare rule
+        readarray -t RULES < <(echo "$CLOUDFLARE_RULES" | jq -r 'keys[]')
+
+        for RULE_NAME in "${RULES[@]}"; do
+            echo "Processing rule: $RULE_NAME"
+
+            # Parse rule name components
+            # Format: <chain_id>_<db_type>_<node_type>  (chain_id has no underscores)
+            IFS='_' read -r CHAIN_ID DB_TYPE NODE_TYPE <<< "$RULE_NAME"
+
+            DOMAIN=$(echo "$CLOUDFLARE_RULES"     | jq -r --arg r "$RULE_NAME" '.[$r].domain')
+            ZONE_ID=$(echo "$CLOUDFLARE_RULES"    | jq -r --arg r "$RULE_NAME" '.[$r].zone_id')
+            RULESET_ID=$(echo "$CLOUDFLARE_RULES" | jq -r --arg r "$RULE_NAME" '.[$r].ruleset_id')
+            RULE_ID=$(echo "$CLOUDFLARE_RULES"    | jq -r --arg r "$RULE_NAME" '.[$r].rule_id')
+            OBJECT_TOKEN=$(object_token_for "$NODE_TYPE")
+
+            echo "Parsed components:"
+            echo "Chain ID: $CHAIN_ID"
+            echo "DB Type: $DB_TYPE"
+            echo "Node Type: $NODE_TYPE (object token: $OBJECT_TOKEN)"
+            echo "Domain: $DOMAIN"
+
+            if [[ -z "$ZONE_ID" || "$ZONE_ID" == "null" || -z "$RULESET_ID" || "$RULESET_ID" == "null" || -z "$RULE_ID" || "$RULE_ID" == "null" ]]; then
+                echo "::error::Missing Cloudflare zone/ruleset/rule id for $RULE_NAME. Check the repository variables."
+                exit 1
+            fi
+
+            # Get and update snapshot height
+            if HEIGHT=$(get_latest_snapshot "$CHAIN_ID" "$OBJECT_TOKEN" "$DB_TYPE"); then
+                echo "Latest $DB_TYPE $NODE_TYPE version of ${CHAIN_ID} is ${HEIGHT}"
+
+                # Update markdown file
+                update_markdown_height "$CHAIN_ID" "$NODE_TYPE" "$DB_TYPE" "$HEIGHT"
+
+                update_cloudflare_rule "$CHAIN_ID" "$HEIGHT" "$DB_TYPE" "$NODE_TYPE" "$OBJECT_TOKEN" "$DOMAIN" "$ZONE_ID" "$RULESET_ID" "$RULE_ID" || exit 1
+            else
+              echo "::warning::No $DB_TYPE $NODE_TYPE snapshot found for $CHAIN_ID (skipping)"
+              continue
+            fi
+        done
+
+    - name: Check for changes
+      id: check-changes
+      run: |
+        if [[ -n "$(git status -s "$FILE_PATH")" ]]; then
+          echo "changes=true" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Import GPG key
+      id: import-gpg
+      uses: crazy-max/ghaction-import-gpg@v6
+      with:
+        gpg_private_key: ${{ secrets.MANTRA_FINANCE_BOT_GPG_PRIVATE_KEY }}
+        passphrase: ${{ secrets.MANTRA_FINANCE_BOT_GPG_PASSPHRASE }}
+        git_user_signingkey: true
+        git_commit_gpgsign: true
+
+    - name: Create Pull Request
+      if: steps.check-changes.outputs.changes == 'true'
+      uses: peter-evans/create-pull-request@v7
+      id: create-pr
+      with:
+        signoff: true
+        title: "chore(ci): Update snapshots height numbers"
+        body: |
+          This PR updates the snapshot height numbers in download-nodes-snapshots.mdx
+          Please accept if you are ok with it, otherwise feel free to reject.
+        commit-message: "chore(ci): Update snapshots height numbers"
+        base: "main"
+        branch: "devops/update-snapshot-height-automated"
+        token: ${{ steps.app-token.outputs.token }}
+        author: "mantra-finance-bot <gcp-security-admins+github-bot@mantra.finance>"
+        committer: "mantra-finance-bot <gcp-security-admins+github-bot@mantra.finance>"
+        reviewers: ${{ env.REVIEWERS }}
+        delete-branch: true
+
+    - name: Enable auto-merge
+      if: steps.create-pr.outputs.pull-request-operation == 'created' || steps.create-pr.outputs.pull-request-operation == 'updated'
+      run: |
+        if ! gh pr merge --auto --squash "${{ steps.create-pr.outputs.pull-request-number }}"; then
+          echo "::error::Failed to enable auto-merge for PR"
+          exit 1
+        fi
+      env:
+        GH_TOKEN: ${{ steps.app-token.outputs.token }}
