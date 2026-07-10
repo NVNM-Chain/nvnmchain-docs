@@ -2,7 +2,7 @@ name: Update Snapshot Version
 
 on:
   schedule:
-    - cron: '0 8 * * *'  # 15:00 ICT (UTC+7)
+    - cron: '0 10 * * *'
   workflow_dispatch:
 
 # NVNM Chain snapshots live in a single R2 bucket (nvnmchain-snapshot) that is
