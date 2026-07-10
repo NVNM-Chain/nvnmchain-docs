@@ -37,8 +37,8 @@ on:
 #   CLOUDFLARE_R2_SECRET_ACCESS_KEY
 #   CLOUDFLARE_API_TOKEN                       token with Zone > Config Rules edit on both zones
 #   GH_APP_PRIVATE_KEY
-#   MANTRA_FINANCE_BOT_GPG_PRIVATE_KEY
-#   MANTRA_FINANCE_BOT_GPG_PASSPHRASE
+#   NVNM_CHAIN_BOT_GPG_PRIVATE_KEY
+#   NVNM_CHAIN_BOT_GPG_PASSPHRASE
 
 env:
   REVIEWERS: ""
@@ -281,8 +281,8 @@ jobs:
       id: import-gpg
       uses: crazy-max/ghaction-import-gpg@v6
       with:
-        gpg_private_key: ${{ secrets.MANTRA_FINANCE_BOT_GPG_PRIVATE_KEY }}
-        passphrase: ${{ secrets.MANTRA_FINANCE_BOT_GPG_PASSPHRASE }}
+        gpg_private_key: ${{ secrets.NVNM_CHAIN_BOT_GPG_PRIVATE_KEY }}
+        passphrase: ${{ secrets.NVNM_CHAIN_BOT_GPG_PASSPHRASE }}
         git_user_signingkey: true
         git_commit_gpgsign: true
 
@@ -300,8 +300,8 @@ jobs:
         base: "main"
         branch: "devops/update-snapshot-height-automated"
         token: ${{ steps.app-token.outputs.token }}
-        author: "mantra-finance-bot <gcp-security-admins+github-bot@mantra.finance>"
-        committer: "mantra-finance-bot <gcp-security-admins+github-bot@mantra.finance>"
+        author: "nvnm-chain-bot <gcp-security-admins+github-nvnm-chain-bot@mantra.finance>"
+        committer: "nvnm-chain-bot <gcp-security-admins+github-nvnm-chain-bot@mantra.finance>"
         reviewers: ${{ env.REVIEWERS }}
         delete-branch: true
 
