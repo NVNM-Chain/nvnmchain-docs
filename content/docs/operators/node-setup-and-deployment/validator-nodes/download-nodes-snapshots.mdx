@@ -1,0 +1,47 @@
+---
+title: "Download Nodes Snapshots"
+description: "On this page, you can find links to download pre-built NVNM Chain L2 nodes with blockchain history included, which will save you time when setting up your node."
+icon: "download"
+---
+
+<Note>
+These snapshots are for the **NVNM Chain L2 (consumer chain)** only. To run a node you also need the **MANTRA Chain L1 (provider chain)** — download its snapshots from the MANTRA Chain docs: [Download Nodes Snapshots](https://docs.mantrachain.io/operators/node-setup-and-deployment/validator-nodes/download-nodes-snapshots).
+</Note>
+
+\
+You can choose from different node combinations:
+
+Node types:
+
+- Fullnode: contains pruned blocks (lighter)
+- Archive: contains full blockchain data (heavier)
+  - Choose this if you need the complete history for historical analysis, etc.
+
+Database:
+
+- goleveldb
+
+Network:
+
+- Mainnet
+- Testnet
+
+<Note>
+The `_latest` URLs always redirect (HTTP 301) to the most recent snapshot for that node type, so you can script downloads against a stable link. The **Height** column below shows the block height of the snapshot each link currently resolves to.
+</Note>
+
+## NVNM Chain L2 URLs
+
+### Mainnet (nvnm-1)
+
+| Node type | Database type | Height  | URL                                                                              |
+| --------- | ------------- | ------- | -------------------------------------------------------------------------------- |
+| Full node | goleveldb     | 1543273 | https://snapshots.mainnet.nvnmchain.io/nvnm-1_goleveldb_fullnode_latest.tar.lz4  |
+| Archive   | goleveldb     | 1543275 | https://snapshots.mainnet.nvnmchain.io/nvnm-1_goleveldb_archive_latest.tar.lz4   |
+
+### Testnet (nvnm-testnet-1)
+
+| Node type | Database type | Height  | URL                                                                                        |
+| --------- | ------------- | ------- | ------------------------------------------------------------------------------------------ |
+| Full node | goleveldb     | 2317720 | https://snapshots.testnet.nvnmchain.io/nvnm-testnet-1_goleveldb_fullnode_latest.tar.lz4    |
+| Archive   | goleveldb     | 2317719 | https://snapshots.testnet.nvnmchain.io/nvnm-testnet-1_goleveldb_archive_latest.tar.lz4     |

@@ -59,7 +59,7 @@ The way MANTRA Chain / cosmos-sdk was designed is that to deploy an L2, the L2 m
 <Steps>
   <Step title="(Optional) Start from an existing snapshot">
 When the node starts, it needs to sync all the data from other nodes, which could be time-consuming.
-In order to expedite the process, we are providing some existing data snapshots at [here](https://docs.mantrachain.io/operators/node-setup-and-deployment/validator-nodes/download-nodes-snapshots).
+In order to expedite the process, we are providing some existing MANTRA Chain L1 data snapshots at the MANTRA Chain docs [here](https://docs.mantrachain.io/operators/node-setup-and-deployment/validator-nodes/download-nodes-snapshots).
 
 <Warning>
 If you are starting the node, please follow the procedure here in order to stop the current service and backup the important data: https://www.polkachu.com/tendermint_snapshots/mantra
@@ -128,6 +128,10 @@ Wait for a few couple of seconds, and if you see the height growing: **success!*
 Inveniam node management and deployment, specs and configuration, match a standard cosmos-sdk L1 node deployment; little needs to be changed - while they can run on the same machine, for security purposes (especially Mainnet) - they should be run on separate machines.
 
 <Steps>
+  <Step title="(Optional) Start from an existing snapshot">
+When the node starts, it needs to sync all the data from other nodes, which could be time-consuming.
+In order to expedite the process, we are providing some existing NVNM Chain L2 data snapshots [here](/operators/node-setup-and-deployment/validator-nodes/download-nodes-snapshots).
+  </Step>
   <Step title="Initialize NVNM Chain Node">
     Run the following command to initialize your NVNM Chain node (configured for _testnet_):
 ```
