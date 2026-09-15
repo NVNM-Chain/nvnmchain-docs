@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import {
   siteConfig,
@@ -48,6 +50,34 @@ describe('themeConfig', () => {
   it('has code-block background values for both modes', () => {
     expect(themeConfig.codeBlock.light.background).toBeTruthy()
     expect(themeConfig.codeBlock.dark.background).toBeTruthy()
+  })
+})
+
+/**
+ * app/globals.css is what actually paints the site; themeConfig.colors is what
+ * the OG image and anything importing getCSSVariables reads. They are two
+ * hand-maintained copies of the same palette, so assert they agree.
+ */
+describe('globals.css accent variables', () => {
+  const globalsCss = readFileSync(resolve(process.cwd(), 'app/globals.css'), 'utf8')
+
+  function cssVarsIn(selector: string): Record<string, string> {
+    const pattern = new RegExp(`^${selector.replace('.', '\\.')}\\s*\\{([^}]*)\\}`, 'm')
+    const block = pattern.exec(globalsCss)
+    if (!block) throw new Error(`No "${selector}" block in app/globals.css`)
+
+    const vars: Record<string, string> = {}
+    for (const [, name, value] of block[1].matchAll(/(--[\w-]+)\s*:\s*([^;]+);/g)) {
+      vars[name] = value.trim()
+    }
+    return vars
+  }
+
+  it.each([
+    [':root', 'light'],
+    ['.dark', 'dark'],
+  ] as const)('%s matches themeConfig.colors.%s', (selector, mode) => {
+    expect(cssVarsIn(selector)).toMatchObject(getCSSVariables(mode))
   })
 })
 

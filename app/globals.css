@@ -47,9 +47,11 @@
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
   --ring: oklch(0.708 0 0);
-  --accent: #0055FF;
+  /* Pre-release channel accent. Mirrors themeConfig.colors.light in
+     lib/theme-config.ts — keep both in sync (a test enforces this). */
+  --accent: #7C3AED;
   --accent-foreground: #ffffff;
-  --accent-muted: rgba(0, 85, 255, 0.1);
+  --accent-muted: rgba(124, 58, 237, 0.08);
 }
 
 .dark {
@@ -69,9 +71,10 @@
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
   --ring: oklch(0.556 0 0);
-  --accent: #07C983;
-  --accent-foreground: #0f172a;
-  --accent-muted: rgba(7, 201, 131, 0.1);
+  /* Mirrors themeConfig.colors.dark in lib/theme-config.ts. */
+  --accent: #A78BFA;
+  --accent-foreground: #12101A;
+  --accent-muted: rgba(167, 139, 250, 0.14);
 }
 
 @layer base {
@@ -129,4 +132,12 @@ pre code span {
 
 ::-webkit-scrollbar-thumb:hover {
   background: oklch(0.556 0 0 / 0.5);
+}
+
+/* CUSTOM OVERRIDE STYLINGS */
+header {
+  img {
+    max-height: 50px;
+    width: auto;
+  }
 }

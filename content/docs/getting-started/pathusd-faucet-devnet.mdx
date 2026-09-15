@@ -1,0 +1,42 @@
+---
+title: "How to get pathUSD on DevNet"
+icon: "coins"
+---
+
+# pathUSD Faucet Details
+
+The faucet is a self-serve web form — no wrapping, minting, or IBC transfer needed (compare `nvnm-testnet-1`'s bridge-only flow).
+
+<Steps>
+  <Step title="Open the faucet">
+    Open the [NVNM Tempo Devnet Faucet](https://faucet.nvnm.canary.mantrachain.dev) in your web browser.
+  </Step>
+
+  <Step title="Request funds">
+    1. Paste your EVM address into the input field.
+    2. Click **Request 100 pathUSD**.
+    3. Confirm the balance on the explorer once the transaction is mined.
+  </Step>
+
+  <Step title="Rate Limits">
+    | Limit | Value |
+    | --- | --- |
+    | Per address | 1 request / 24 h |
+  </Step>
+</Steps>
+
+## Checking Faucet Health (no wallet needed)
+
+```bash
+curl -s https://faucet.nvnm.canary.mantrachain.dev/api/faucet/balance | jq
+```
+
+Expected output:
+
+```json
+{
+  "balance": "9,999,900.00",
+  "balanceRaw": "9999899999681",
+  "healthy": true
+}
+```
