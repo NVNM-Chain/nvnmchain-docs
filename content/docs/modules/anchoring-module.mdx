@@ -8,9 +8,10 @@ The Anchoring module is a custom Cosmos SDK module exposed to EVM through a prec
 
 # Core Concepts
 
-- **Registry** — A named container for records. Any user can create one and automatically becomes its admin.
-- **Record** — An anchored reference to off-chain data, identified by a checksum. Records are versioned: submitting the same checksum to the same registry increments the version while preserving the `recordId`.
-- **Roles** — Two roles govern access: `admin` (full control, can grant/revoke roles) and `editor` (can add records and update status).
+- **Registry** — A named container for records, always referenced canonically by its auto-incrementing `id`. Any user can create one and automatically becomes its admin. Registry `name` is **not** unique — multiple registries may share the same name.
+- **Record** — An anchored reference to off-chain data, identified by a checksum, scoped to a `registryId`. Records are versioned: submitting the same checksum to the same registry increments the version (`index`) while preserving the `recordId`.
+- **Roles** — Two roles govern access: `admin` (full control, can grant/revoke roles) and `editor` (can add records and update status). Roles are evaluated **Record → Registry**, with no chain-level fallback for these operations.
+- **Registry Name Index** — Registries are addressed on-chain by `id` only; there is no on-chain name index. An opt-in, per-node, off-chain SQLite index can be enabled to support name search (`registriesByName` / `SearchRegistriesByName`) — see [Registry Name Index](#registry-name-index) below.
 
 <Info>
 **Precompile Address:** `0x0000000000000000000000000000000000000A00`
@@ -23,9 +24,9 @@ The Anchoring module is a custom Cosmos SDK module exposed to EVM through a prec
 
 | Function | Description |
 | --- | --- |
-| `addRegistry(string name, string description)` | Creates a new registry. Returns the `registryId`. Caller becomes admin. |
-| `addRecord(Record record)` | Adds a record to a registry. If the checksum already exists, a new version is created. |
-| `updateRecordStatus(uint64 registryId, uint64 recordId, string checksum, uint64 index, string status)` | Updates the status of a specific record version. |
+| `addRegistry(string name, string description, string metadata)` | Creates a new registry. Returns the `registryId`. Caller becomes admin. |
+| `addRecord(Record record)` | Adds a record to `record.registryId`. If the checksum already exists in that registry, a new version is created. |
+| `updateRecordStatus(uint64 registryId, uint64 recordId, uint64 index, string status)` | Updates the status of a specific record version. |
 | `grantRole(uint64 registryId, string checksum, address account, string role)` | Grants a role to an address. Pass an empty `checksum` for registry-level scope. |
 | `revokeRole(uint64 registryId, string checksum, address account, string role)` | Revokes a role from an address. |
 
@@ -33,11 +34,12 @@ The Anchoring module is a custom Cosmos SDK module exposed to EVM through a prec
 
 | Function | Description |
 | --- | --- |
-| `records(string registry, string checksum, uint64 recordId, uint64 index, PageRequest pagination)` | Fetches records. All filter parameters are optional — pass empty/zero to ignore. |
-| `registries(uint64 registryId, string name, PageRequest pagination)` | Fetches registries by ID or name. |
+| `records(uint64 registryId, string checksum, uint64 recordId, uint64 index, PageRequest pagination)` | Fetches records. All filter parameters are optional — pass empty/zero to ignore. |
+| `registries(uint64 registryId, PageRequest pagination)` | Fetches registries by id. `registryId = 0` lists all registries. |
+| `registriesByName(string name, uint8 matchMode, PageRequest pagination)` | Looks up registries by name via the node-local [Registry Name Index](#registry-name-index). `eth_call`/EOA-only — see below. |
 
 <Note>
-Queries are read-only and do not require any permissions.
+`records` and `registries` are read-only and do not require any permissions. `registriesByName` additionally requires the caller to be an EOA acting through `eth_call`, and only answers on nodes that have the name index enabled.
 </Note>
 
 ## Data Structures
@@ -46,7 +48,6 @@ Queries are read-only and do not require any permissions.
 
 ```solidity
 struct Record {
-    string registry;      // Registry name
     string uri;           // Link to off-chain data (e.g. IPFS URI)
     string checksum;      // Cryptographic hash of the data
     string checksumAlgo;  // Algorithm used (e.g. "sha256")
@@ -56,6 +57,7 @@ struct Record {
     uint64 recordId;      // Set by the chain — use 0 on input
     uint64 index;         // Version index — set by the chain
     bool   isLatest;      // Latest version flag — set by the chain
+    uint64 registryId;    // The registry this record belongs to
 }
 ```
 
@@ -68,6 +70,7 @@ struct Registry {
     string description;
     string creator;       // Bech32 address of the creator
     string createdAt;
+    string metadata;      // JSON metadata string
 }
 ```
 
@@ -90,24 +93,48 @@ struct PageResponse {
 
 ## Permission Model
 
-The module uses hierarchical role-based access control. When a permission check runs, it evaluates roles in order — **Record → Registry → Global** — and permits the action at the first match.
+The module uses hierarchical role-based access control. When a permission check runs, it evaluates roles in order — **Record → Registry** — and permits the action at the first match. There is no chain-level (global) fallback for `addRecord`, `updateRecordStatus`, `grantRole`, or `revokeRole`.
 
 | Operation | Required Role |
 | --- | --- |
 | `addRegistry` | Any user |
 | `addRecord` | `admin` or `editor` |
 | `updateRecordStatus` | `admin` or `editor` |
-| `grantRole` | `admin` only |
-| `revokeRole` | `admin` only |
+| `grantRole` | Registry `admin` only |
+| `revokeRole` | Registry `admin` only |
 | Queries | None |
 
 ### Role Scoping
 
-- **Record-level** — Applies to a single checksum. Grant with a specific `checksum` value.
+- **Record-level** — Applies to a single checksum within a registry. Grant with a specific `checksum` value.
 - **Registry-level** — Applies to all records in a registry. Grant with an empty `checksum`.
-- **Global** — Applies across all registries (assigned at the chain level).
 
 Record-level roles take precedence over registry-level roles. A user with `editor` at the registry level but `admin` on a specific record will have admin permissions for that record only.
+
+## Events
+
+When called from the EVM, the precompile emits EVM logs for state-changing operations. Topic0 is the full 32-byte `keccak256(<event signature>)`; topic1 is the indexed caller address (`msg.sender`). Values the chain assigns during execution — `registryId` from `addRegistry`, `recordId` from `addRecord` — can be decoded from the transaction receipt directly, without an `eth_call` dry-run.
+
+| Event signature |
+| --- |
+| `AddRegistry(address indexed caller, uint64 registryId, string name)` |
+| `AddRecord(address indexed caller, uint64 registryId, uint64 recordId, uint64 index, string checksum)` |
+| `UpdateRecordStatus(address indexed caller, uint64 registryId, uint64 recordId, uint64 index, string status)` |
+| `GrantRole(address indexed caller, uint64 registryId, string checksum, address account, string role)` |
+| `RevokeRole(address indexed caller, uint64 registryId, string checksum, address account, string role)` |
+
+<Note>
+Only the caller is indexed. `registryId`/`recordId` live in the log data, so they can be decoded from a receipt but cannot be used as an `eth_getLogs` topic filter.
+</Note>
+
+## Registry Name Index
+
+Registries are addressed by `id` on chain; names are not unique and have no on-chain index. Name search is an **opt-in, per-node, off-chain** SQLite index.
+
+- **Enable:** `enabled = true` under `[anchoring-name-index]` in `app.toml` (`db-path` defaults to `data/anchoring_name_index.db`). Off by default.
+- **Query modes:** `EXACT`, `PREFIX`, `SUFFIX`, or `CONTAINS`, matched case-insensitively (ASCII case-folded), with offset/limit paging (default 50, max 200). `CONTAINS` requires at least 3 characters. Nodes without the index answer `FailedPrecondition`.
+- **Access:** Cosmos callers use `Query/SearchRegistriesByName` (REST `.../anchoring/v1/registries/search`). EVM callers use the `registriesByName` precompile method, which is served only via `eth_call`/`eth_estimateGas` from an EOA (`msg.sender == tx.origin`, no contract code) — a transaction reverts with `registriesByName is query-only: use eth_call, not a transaction`.
+- **Consistency:** The index is **not consensus state** — it is derived from the on-chain registry collection, nodes need not run it, and two nodes can briefly differ while one catches up after a restart.
 
 # Usage Examples (EVM)
 
@@ -119,15 +146,18 @@ DOCUMENT_ADDRESS = "0x0000000000000000000000000000000000000A00"
 
 receipt = await DOCUMENT_PRECOMPILE.fns.addRegistry(
     "my-registry",
-    "A registry for document anchoring"
+    "A registry for document anchoring",
+    '{"owner": "NVNM Foundation"}',  # metadata (JSON string)
 ).transact(w3, admin_account, to=DOCUMENT_ADDRESS, gas=100_000)
+
+# registryId is only returned directly from an eth_call/dry-run;
+# from a mined tx, decode it from the AddRegistry log in the receipt.
 ```
 
 ## Adding a Record
 
 ```python
 record = (
-    "my-registry",          # registry
     "ipfs://QmABC123...",   # uri
     "abc123def456",         # checksum
     "sha256",               # checksumAlgo
@@ -136,7 +166,8 @@ record = (
     "active",               # status
     0,                      # recordId (chain sets this)
     0,                      # index (chain sets this)
-    False                   # isLatest (chain sets this)
+    False,                  # isLatest (chain sets this)
+    registry_id,            # registryId — the registry this record belongs to
 )
 
 receipt = await DOCUMENT_PRECOMPILE.fns.addRecord(record).transact(
@@ -150,13 +181,28 @@ receipt = await DOCUMENT_PRECOMPILE.fns.addRecord(record).transact(
 pagination = (b"", 0, 100, False, False)
 
 records, page_response = await DOCUMENT_PRECOMPILE.fns.records(
-    "my-registry",  # filter by registry (empty string = all)
+    registry_id,    # filter by registryId (0 = ignore)
     "",             # filter by checksum (empty string = all)
     0,              # recordId (0 = ignore)
     0,              # index (0 = ignore)
     pagination
 ).call(w3, to=DOCUMENT_ADDRESS)
 ```
+
+## Querying Registries by Name
+
+```python
+# matchMode: 0/1 exact, 2 prefix, 3 suffix, 4 contains
+registries, page_response = await DOCUMENT_PRECOMPILE.fns.registriesByName(
+    "my-registry",
+    1,              # EXACT
+    pagination
+).call(w3, to=DOCUMENT_ADDRESS)
+```
+
+<Note>
+`registriesByName` only works with `.call()` (`eth_call`), only for an EOA caller, and only on a node with the name index enabled — see [Registry Name Index](#registry-name-index).
+</Note>
 
 ## Granting a Role
 
@@ -180,6 +226,10 @@ await DOCUMENT_PRECOMPILE.fns.grantRole(
 
 # Usage Example (COSMOS TX)
 
+Registries are referenced by their assigned `registry_id`, which the chain only allocates when `MsgAddRegistry` executes — it cannot be predicted inside the same batched transaction. Create the registry first, read `registry_id` back from the response, then submit `MsgAddRecord` in a second transaction.
+
+**1. Create the registry:**
+
 ```jsonc
 {
     "body": {
@@ -189,13 +239,48 @@ await DOCUMENT_PRECOMPILE.fns.grantRole(
                 "sender": "<WALLET_ADDRESS>",
                 "name": "<NAME OF REGISTRY>",
                 "description": "<DESCRIPTION>",
-                "metadata": "{\"owner\":\"NVNM Foundation\", \"purpose\":\"Protocol Documentation\", \"website\":\"https://nvnmchain.io\"}" // Customisable metadata json structure
-            },
+                "metadata": "{\"owner\":\"NVNM Foundation\", \"purpose\":\"Protocol Documentation\", \"website\":\"https://nvnmchain.io\"}"
+            }
+        ],
+        "memo": "Creating the registry for the NVNM Chain Whitepaper.",
+        "timeout_height": "0",
+        "unordered": false,
+        "timeout_timestamp": null,
+        "extension_options": [],
+        "non_critical_extension_options": []
+    },
+    "auth_info": {
+        "signer_infos": [],
+        "fee": {
+            "amount": [
+                {
+                    "denom": "ibc/93575DF9D4BC5B2C85D967DE020E5DEA1863FDD108AD509A36DA6C83E3398227",
+                    "amount": "0"
+                }
+            ],
+            "gas_limit": "3000000",
+            "payer": "",
+            "granter": ""
+        },
+        "tip": null
+    },
+    "signatures": []
+}
+```
+
+The `MsgAddRegistryResponse` returns `registry_id`. Read it from the tx result.
+
+**2. Add the record, using the returned `registry_id`:**
+
+```jsonc
+{
+    "body": {
+        "messages": [
             {
                 "@type": "/nvnmchain.anchoring.v1.MsgAddRecord",
                 "sender": "<WALLET_ADDRESS>",
                 "record": {
-                    "registry": "<NAME OF REGISTRY>",
+                    "registry_id": "<REGISTRY_ID FROM STEP 1>",
                     "uri": "<IPFS or other URL RECORD>",
                     "checksum": "<SHA256SUM RECOMMENDED>",
                     "checksum_algo": "sha256",
@@ -234,7 +319,10 @@ await DOCUMENT_PRECOMPILE.fns.grantRole(
 
 | Scenario | Result |
 | --- | --- |
-| Non-admin calls `grantRole` or `revokeRole` | Transaction reverts |
-| `addRecord` with an invalid registry name | Transaction reverts |
+| Non-admin calls `grantRole` or `revokeRole` | Transaction reverts (missing admin role) |
+| `addRecord`/`updateRecordStatus` without `admin` or `editor` | Transaction reverts (unauthorized) |
+| `addRecord` with a non-existent `registryId` | Transaction reverts |
+| `registriesByName` sent as a transaction instead of `eth_call` | Transaction reverts (`registriesByName is query-only`) |
+| `registriesByName` called by a contract, or when the name index is disabled on the node | Transaction reverts |
 | Query for a non-existent registry or checksum | Returns empty result |
 | Granting an already-held role | Succeeds (idempotent) |
