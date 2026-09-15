@@ -1,3 +1,9 @@
+# Single-package repo, but pnpm 11 requires `packages` once this file exists —
+# and it must exist, because build-script approval lives here now (the `pnpm`
+# field in package.json is no longer read).
+packages:
+  - '.'
+
 allowBuilds:
   esbuild: true
   sharp: true

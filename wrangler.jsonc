@@ -33,6 +33,20 @@
           "custom_domain": true
         }
       ]
+    },
+    "next": {
+      "name": "nvnmchain-docs-next",
+      "vars": {
+        "NODE_ENV": "production"
+      },
+      "workers_dev": false,
+      "preview_urls": false,
+      "routes": [
+        {
+          "pattern": "next.docs.nvnmchain.io",
+          "custom_domain": true
+        }
+      ]
     }
   }
 }

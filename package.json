@@ -9,6 +9,7 @@
     "build:worker": "next build && opennextjs-cloudflare build",
     "deploy": "opennextjs-cloudflare deploy",
     "deploy:prod": "opennextjs-cloudflare deploy --env=prod",
+    "deploy:next": "opennextjs-cloudflare deploy --env=next",
     "preview": "opennextjs-cloudflare preview",
     "start": "next start",
     "lint": "next lint",
@@ -49,13 +50,5 @@
     "typescript": "^5",
     "vitest": "^4.1.4",
     "wrangler": "^4.73.0"
-  },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "esbuild",
-      "sharp",
-      "unrs-resolver",
-      "workerd"
-    ]
   }
 }
