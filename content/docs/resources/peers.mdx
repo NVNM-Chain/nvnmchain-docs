@@ -12,11 +12,15 @@ This page lists peer information for connecting to NVNM Chain (L1) networks.
 
 `nvnm-tempo-testnet-1` (EVM Chain ID `787223`) is a fork of [Tempo](https://github.com/tempoxyz/tempo) — `reth` execution + Commonware Simplex BFT consensus. Peering is configured via `reth`'s `--trusted-peers` flag with `enode://` URLs. See [Network Details](/resources/network-details) for RPC/explorer endpoints.
 
+<Note title="Private peers — public peer coming soon">
+  These are currently private peers reachable only from within the cluster. Public peer endpoints for external connections will be published soon.
+</Note>
+
 **Trusted Peers** (consensus nodes, in-cluster only)
 
 ```
-enode://921768d7183fcfbdf18edff359cef148e307c06ddf7ffe7f62244111788b823505afd3fc2c41881343c4f87a85a925f0fc9be13bd2a2767f785c399fc794eaee@nvnm-tempo-testnet-1-rpc-internal-0.nvnm-tempo-testnet-1-rpc-internal-headless.nvnm-tempo-testnet-1.svc.mantra-chain-asia-east2-std.mantra-chain-sandbox.sandbox:30303
-enode://6deba23016d64e7bc0d1abd4e3ea603611348b60d0cedf754ffe80e5d9ff6cafa25fb0ed557c450944b92c3bfc3bd764d34227b551374c7ed6b8260ec66a540d@nvnm-tempo-testnet-1-rpc-internal-1.nvnm-tempo-testnet-1-rpc-internal-headless.nvnm-tempo-testnet-1.svc.mantra-chain-asia-east2-std.mantra-chain-sandbox.sandbox:30303
+enode://7958b86a8099d3a4c06cd09ec7aa64be6b39a0c38bfc5a6724991a50a1354fdadc0e23698ebce50bc3f1cfcb3516ce9a36b7f916b530074d0fdf9ea8968b920a@nvnm-tempo-testnet-1-rpc-internal-0.nvnm-tempo-testnet-1-rpc-internal-headless.nvnm-tempo-testnet-1.svc.mantra-chain-asia-east2-std.mantra-chain-testnet.testnet:30303
+enode://2ed1d6c915d45bfb71897f08a847cf9e7b4a571ceb6f636b5782f5398acc2d2e09ab023ba07b3ea4277233d47167a3220f2e2ddb6431f390d0f9ccb6ca02bc28@nvnm-tempo-testnet-1-rpc-internal-1.nvnm-tempo-testnet-1-rpc-internal-headless.nvnm-tempo-testnet-1.svc.mantra-chain-asia-east2-std.mantra-chain-testnet.testnet:30303
 ```
 
 **P2P Port**: `30303` (used for both peer connections and discovery)
@@ -27,7 +31,7 @@ To add these as trusted peers on a node running inside the sandbox devnet cluste
 tempo node \
   --port=30303 \
   --discovery.port=30303 \
-  --trusted-peers=enode://921768d7183fcfbdf18edff359cef148e307c06ddf7ffe7f62244111788b823505afd3fc2c41881343c4f87a85a925f0fc9be13bd2a2767f785c399fc794eaee@nvnm-tempo-devnet-1-rpc-internal-0.nvnm-tempo-devnet-1-rpc-internal-headless.nvnm-tempo-devnet-1.svc.mantra-chain-asia-east2-std.mantra-chain-sandbox.sandbox:30303,enode://6deba23016d64e7bc0d1abd4e3ea603611348b60d0cedf754ffe80e5d9ff6cafa25fb0ed557c450944b92c3bfc3bd764d34227b551374c7ed6b8260ec66a540d@nvnm-tempo-devnet-1-rpc-internal-1.nvnm-tempo-devnet-1-rpc-internal-headless.nvnm-tempo-devnet-1.svc.mantra-chain-asia-east2-std.mantra-chain-sandbox.sandbox:30303
+  --trusted-peers=enode://7958b86a8099d3a4c06cd09ec7aa64be6b39a0c38bfc5a6724991a50a1354fdadc0e23698ebce50bc3f1cfcb3516ce9a36b7f916b530074d0fdf9ea8968b920a@nvnm-tempo-testnet-1-rpc-internal-0.nvnm-tempo-testnet-1-rpc-internal-headless.nvnm-tempo-testnet-1.svc.mantra-chain-asia-east2-std.mantra-chain-testnet.testnet:30303,enode://2ed1d6c915d45bfb71897f08a847cf9e7b4a571ceb6f636b5782f5398acc2d2e09ab023ba07b3ea4277233d47167a3220f2e2ddb6431f390d0f9ccb6ca02bc28@nvnm-tempo-testnet-1-rpc-internal-1.nvnm-tempo-testnet-1-rpc-internal-headless.nvnm-tempo-testnet-1.svc.mantra-chain-asia-east2-std.mantra-chain-testnet.testnet:30303
 ```
   </Tab>
   <Tab title="NVNM Chain L1: DevNet 1">
