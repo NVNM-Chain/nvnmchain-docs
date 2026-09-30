@@ -29,10 +29,10 @@ export const siteConfig = {
       href: 'https://hub.inveniam.io',
     },
   },
-  // banner: {
-  //   content: '⚠️ NVNM Chain Testnet `nvnm-testnet-1` Genesis is IN PROGRESS. Endpoints and services may be unstable or unusable until genesis is complete.',
-  //   dismissible: false,
-  // },
+  banner: {
+    content: '⚠️ This documentation covers the Legacy, Closed-Beta of NVNM Chain L2, powered by MANTRA Chain. For the *NEW* NVNM Chain documentation, please visit https://docs.nvnmchain.io.',
+    dismissible: true,
+  },
 }
 
 export const themeConfig = {
