@@ -25,17 +25,13 @@
       "preview_urls": true,
       "routes": [
         {
-          "pattern": "docs.nvnmchain.io",
-          "custom_domain": true
-        },
-        {
-          "pattern": "docs.testnet.nvnmchain.io",
+          "pattern": "legacy.docs.nvnmchain.io",
           "custom_domain": true
         }
       ]
     },
     "next": {
-      "name": "nvnmchain-docs-next",
+      "name": "nvnmchain-docs-v3",
       "vars": {
         "NODE_ENV": "production"
       },
@@ -43,7 +39,11 @@
       "preview_urls": false,
       "routes": [
         {
-          "pattern": "next.docs.nvnmchain.io",
+          "pattern": "docs.nvnmchain.io",
+          "custom_domain": true
+        },
+        {
+          "pattern": "docs.nvnm.testnet.nvnmchain.io",
           "custom_domain": true
         }
       ]
