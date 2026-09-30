@@ -27,8 +27,8 @@ export const siteConfig = {
     },
   },
   banner: {
-    content: 'nvnm-tempo-devnet-1 is a NEW and Experimental L1 - a standalone EVM DevNet forked from Tempo.  Endpoints and services may be unstable or unusable and the chain may be reset from time-to-time.',
-    dismissible: false,
+    content: 'NVNM Testnet is now LIVE! For documentation relating to the NVNM Closed Beta L2, visit https://legacy.docs.nvnmchain.io',
+    dismissible: true,
   },
 }
 
