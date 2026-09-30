@@ -1,0 +1,42 @@
+---
+title: "How to get nUSD on Testnet"
+icon: "coins"
+---
+
+# nUSD Faucet Details
+
+The faucet is a self-serve web form — no wrapping, minting, or IBC transfer needed (compare `nvnm-testnet-1`'s bridge-only flow).
+
+<Steps>
+  <Step title="Open the faucet">
+    Open the [NVNM Tempo Testnet Faucet](https://faucet.nvnm.testnet.nvnmchain.io) in your web browser.
+  </Step>
+
+  <Step title="Request funds">
+    1. Paste your EVM address into the input field.
+    2. Click **Request 100 nUSD**.
+    3. Confirm the balance on the explorer once the transaction is mined.
+  </Step>
+
+  <Step title="Rate Limits">
+    | Limit | Value |
+    | --- | --- |
+    | Per address | 1 request / 24 h |
+  </Step>
+</Steps>
+
+## Checking Faucet Health (no wallet needed)
+
+```bash
+curl -s https://faucet.nvnm.testnet.nvnmchain.io/api/faucet/balance | jq
+```
+
+Expected output:
+
+```json
+{
+  "balance": "9,999,900.00",
+  "balanceRaw": "9999899999681",
+  "healthy": true
+}
+```

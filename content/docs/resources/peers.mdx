@@ -1,11 +1,36 @@
 ---
 title: "Peers"
-description: "Trusted peers for NVNM Chain NEXT (L1)"
+description: "Trusted peers for NVNM Chain (L1)"
 icon: "link"
 ---
 
-This page lists peer information for connecting to NVNM Chain NEXT (L1) networks.
+This page lists peer information for connecting to NVNM Chain (L1) networks.
 
+<Tabs>
+  <Tab title="NVNM Chain L1: Testnet 1">
+# Testnet
+
+`nvnm-tempo-testnet-1` (EVM Chain ID `787223`) is a fork of [Tempo](https://github.com/tempoxyz/tempo) — `reth` execution + Commonware Simplex BFT consensus. Peering is configured via `reth`'s `--trusted-peers` flag with `enode://` URLs. See [Network Details](/resources/network-details) for RPC/explorer endpoints.
+
+**Trusted Peers** (consensus nodes, in-cluster only)
+
+```
+enode://921768d7183fcfbdf18edff359cef148e307c06ddf7ffe7f62244111788b823505afd3fc2c41881343c4f87a85a925f0fc9be13bd2a2767f785c399fc794eaee@nvnm-tempo-testnet-1-rpc-internal-0.nvnm-tempo-testnet-1-rpc-internal-headless.nvnm-tempo-testnet-1.svc.mantra-chain-asia-east2-std.mantra-chain-sandbox.sandbox:30303
+enode://6deba23016d64e7bc0d1abd4e3ea603611348b60d0cedf754ffe80e5d9ff6cafa25fb0ed557c450944b92c3bfc3bd764d34227b551374c7ed6b8260ec66a540d@nvnm-tempo-testnet-1-rpc-internal-1.nvnm-tempo-testnet-1-rpc-internal-headless.nvnm-tempo-testnet-1.svc.mantra-chain-asia-east2-std.mantra-chain-sandbox.sandbox:30303
+```
+
+**P2P Port**: `30303` (used for both peer connections and discovery)
+
+To add these as trusted peers on a node running inside the sandbox devnet cluster:
+
+```bash
+tempo node \
+  --port=30303 \
+  --discovery.port=30303 \
+  --trusted-peers=enode://921768d7183fcfbdf18edff359cef148e307c06ddf7ffe7f62244111788b823505afd3fc2c41881343c4f87a85a925f0fc9be13bd2a2767f785c399fc794eaee@nvnm-tempo-devnet-1-rpc-internal-0.nvnm-tempo-devnet-1-rpc-internal-headless.nvnm-tempo-devnet-1.svc.mantra-chain-asia-east2-std.mantra-chain-sandbox.sandbox:30303,enode://6deba23016d64e7bc0d1abd4e3ea603611348b60d0cedf754ffe80e5d9ff6cafa25fb0ed557c450944b92c3bfc3bd764d34227b551374c7ed6b8260ec66a540d@nvnm-tempo-devnet-1-rpc-internal-1.nvnm-tempo-devnet-1-rpc-internal-headless.nvnm-tempo-devnet-1.svc.mantra-chain-asia-east2-std.mantra-chain-sandbox.sandbox:30303
+```
+  </Tab>
+  <Tab title="NVNM Chain L1: DevNet 1">
 # DevNet
 
 `nvnm-tempo-devnet-1` (EVM Chain ID `787222`) is a fork of [Tempo](https://github.com/tempoxyz/tempo) — `reth` execution + Commonware Simplex BFT consensus. Peering is configured via `reth`'s `--trusted-peers` flag with `enode://` URLs. See [Network Details](/resources/network-details) for RPC/explorer endpoints.
@@ -31,3 +56,5 @@ tempo node \
   --discovery.port=30303 \
   --trusted-peers=enode://921768d7183fcfbdf18edff359cef148e307c06ddf7ffe7f62244111788b823505afd3fc2c41881343c4f87a85a925f0fc9be13bd2a2767f785c399fc794eaee@nvnm-tempo-devnet-1-rpc-internal-0.nvnm-tempo-devnet-1-rpc-internal-headless.nvnm-tempo-devnet-1.svc.mantra-chain-asia-east2-std.mantra-chain-sandbox.sandbox:30303,enode://6deba23016d64e7bc0d1abd4e3ea603611348b60d0cedf754ffe80e5d9ff6cafa25fb0ed557c450944b92c3bfc3bd764d34227b551374c7ed6b8260ec66a540d@nvnm-tempo-devnet-1-rpc-internal-1.nvnm-tempo-devnet-1-rpc-internal-headless.nvnm-tempo-devnet-1.svc.mantra-chain-asia-east2-std.mantra-chain-sandbox.sandbox:30303
 ```
+  </Tab>
+</Tabs>

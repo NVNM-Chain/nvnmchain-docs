@@ -1,22 +1,27 @@
 ---
 title: "Anchoring Module"
 description: >-
-  Native cosmos module, extended with EVM-compatible precompile: Anchoring module is used to manage registries, records, and role-based access.
+  A genesis-installed EVM contract on NVNM Chain used to manage registries, records, and role-based access for anchoring off-chain artifacts on-chain.
 ---
 
-The Anchoring module is a custom Cosmos SDK module exposed to EVM through a precompiled contract. It allows both Cosmos and EVM callers to create registries, anchor off-chain artifacts (documents, files, data) on-chain via checksummed records, and manage access through a role-based permission system.
+The Anchoring module lets EVM callers create registries, anchor off-chain artifacts (documents, files, data) on-chain via checksummed records, and manage access through a role-based permission system.
 
 # Core Concepts
 
 - **Registry** — A named container for records, always referenced canonically by its auto-incrementing `id`. Any user can create one and automatically becomes its admin. Registry `name` is **not** unique — multiple registries may share the same name.
 - **Record** — An anchored reference to off-chain data, identified by a checksum, scoped to a `registryId`. Records are versioned: submitting the same checksum to the same registry increments the version (`index`) while preserving the `recordId`.
 - **Roles** — Two roles govern access: `admin` (full control, can grant/revoke roles) and `editor` (can add records and update status). Roles are evaluated **Record → Registry**, with no chain-level fallback for these operations.
-- **Registry Name Index** — Registries are addressed on-chain by `id` only; there is no on-chain name index. An opt-in, per-node, off-chain SQLite index can be enabled to support name search (`registriesByName` / `SearchRegistriesByName`) — see [Registry Name Index](#registry-name-index) below.
+- **Registry Name Index** — Registries are addressed on-chain by `id` only; there is no on-chain name index. An opt-in, per-node, off-chain RocksDB index can be enabled to support fuzzy name search — see [Registry Name Index](#registry-name-index) below.
 
 <Info>
-**Precompile Address:** `0x0000000000000000000000000000000000000A00`
+**Contract Address:** `0x0000000000000000000000000000000000000A00`
 </Info>
 
+## Not a precompile
+
+This is **not a native EVM precompile** — it's ordinary Solidity bytecode ([`Anchoring.sol`](https://github.com/NVNM-Chain/nvnmchain-contracts), the source repo for all of this chain's genesis-installed contracts), placed at this address either in the genesis allocation (when a chain is built with the `--anchoring` flag to `generate-genesis`) or installed by protocol consensus at the `Nvnm1` hardfork boundary, overwriting whatever code the genesis alloc had while leaving its storage untouched. A native precompile was tried first and reverted — a precompile pre-empts any contract code at the same address, so it would have permanently shadowed this contract. Functionally this is invisible to a caller: the address, ABI, and behavior are the same as calling any other contract.
+
+A chain that never sets `--anchoring` and never schedules `Nvnm1Time` has no code at this address at all — calls there behave like calling an empty account.
 
 # Functions
 
@@ -36,10 +41,10 @@ The Anchoring module is a custom Cosmos SDK module exposed to EVM through a prec
 | --- | --- |
 | `records(uint64 registryId, string checksum, uint64 recordId, uint64 index, PageRequest pagination)` | Fetches records. All filter parameters are optional — pass empty/zero to ignore. |
 | `registries(uint64 registryId, PageRequest pagination)` | Fetches registries by id. `registryId = 0` lists all registries. |
-| `registriesByName(string name, uint8 matchMode, PageRequest pagination)` | Looks up registries by name via the node-local [Registry Name Index](#registry-name-index). `eth_call`/EOA-only — see below. |
+| `registriesByName(string name, uint8 matchMode, PageRequest pagination)` | **Exact match only** (`matchMode` 0 or 1). Prefix/suffix/contains revert on-chain — see [Registry Name Index](#registry-name-index) for the off-chain path. |
 
 <Note>
-`records` and `registries` are read-only and do not require any permissions. `registriesByName` additionally requires the caller to be an EOA acting through `eth_call`, and only answers on nodes that have the name index enabled.
+`records`, `registries`, and `registriesByName` (exact mode) are read-only and do not require any permissions, and can be called via a normal transaction or `eth_call`.
 </Note>
 
 ## Data Structures
@@ -51,7 +56,7 @@ struct Record {
     string uri;           // Link to off-chain data (e.g. IPFS URI)
     string checksum;      // Cryptographic hash of the data
     string checksumAlgo;  // Algorithm used (e.g. "sha256")
-    string metadata;      // JSON metadata string
+    string metadata;      // JSON metadata string — "{}" is rejected as empty
     string timestamp;     // Set by the chain — ignored on input
     string status;        // User-defined (e.g. "active", "removed")
     uint64 recordId;      // Set by the chain — use 0 on input
@@ -68,8 +73,8 @@ struct Registry {
     uint64 id;
     string name;
     string description;
-    string creator;       // Bech32 address of the creator
-    string createdAt;
+    string creator;       // Bech32 address of the creator (HRP "nvnm"), even though the caller is an EVM address
+    string createdAt;      // e.g. "2026-09-24 03:15:16 +0000 UTC" — whole seconds only, no fractional part
     string metadata;      // JSON metadata string
 }
 ```
@@ -91,18 +96,28 @@ struct PageResponse {
 }
 ```
 
+Default page limit is 50, max is 200.
+
 ## Permission Model
 
-The module uses hierarchical role-based access control. When a permission check runs, it evaluates roles in order — **Record → Registry** — and permits the action at the first match. There is no chain-level (global) fallback for `addRecord`, `updateRecordStatus`, `grantRole`, or `revokeRole`.
+The module uses hierarchical role-based access control. When a permission check runs, it evaluates roles in order — **Record → Registry** — and permits the action at the first match. There is no chain-level (global) fallback for `addRecord`, `updateRecordStatus`, `grantRole`, or `revokeRole` — **except** the module-admin break-glass path below.
 
 | Operation | Required Role |
 | --- | --- |
-| `addRegistry` | Any user |
+| `addRegistry` | Any EOA |
 | `addRecord` | `admin` or `editor` |
 | `updateRecordStatus` | `admin` or `editor` |
-| `grantRole` | Registry `admin` only |
+| `grantRole` | Registry `admin`, **or** the module admin (registry-scoped `admin` role only — see below) |
 | `revokeRole` | Registry `admin` only |
 | Queries | None |
+
+<Note>
+Every state-changing function requires the caller to be an EOA (`msg.sender == tx.origin`, no contract code — an EIP-7702 delegation is fine). A contract cannot call these on a user's behalf.
+</Note>
+
+### Module admin break-glass
+
+`_moduleAdmin` is a fixed address configured at genesis (not settable through any function on this contract). It can seed a **registry-scoped `admin` role** directly via `grantRole`, skipping both the normal RBAC check and the EOA gate — intended as recovery if a registry's admin role is otherwise unreachable. It cannot grant any other role, and cannot bypass `revokeRole`'s checks.
 
 ### Role Scoping
 
@@ -113,15 +128,15 @@ Record-level roles take precedence over registry-level roles. A user with `edito
 
 ## Events
 
-When called from the EVM, the precompile emits EVM logs for state-changing operations. Topic0 is the full 32-byte `keccak256(<event signature>)`; topic1 is the indexed caller address (`msg.sender`). Values the chain assigns during execution — `registryId` from `addRegistry`, `recordId` from `addRecord` — can be decoded from the transaction receipt directly, without an `eth_call` dry-run.
+Topic0 is the full 32-byte `keccak256(<event signature>)`; topic1 is the indexed caller address (`msg.sender`). Values the chain assigns during execution — `registryId` from `addRegistry`, `recordId` from `addRecord` — can be decoded from the transaction receipt directly, without an `eth_call` dry-run.
 
-| Event signature |
-| --- |
-| `AddRegistry(address indexed caller, uint64 registryId, string name)` |
-| `AddRecord(address indexed caller, uint64 registryId, uint64 recordId, uint64 index, string checksum)` |
-| `UpdateRecordStatus(address indexed caller, uint64 registryId, uint64 recordId, uint64 index, string status)` |
-| `GrantRole(address indexed caller, uint64 registryId, string checksum, address account, string role)` |
-| `RevokeRole(address indexed caller, uint64 registryId, string checksum, address account, string role)` |
+| Event signature | Topic0 |
+| --- | --- |
+| `AddRegistry(address indexed caller, uint64 registryId, string name)` | `0x181791bc379acedd3615cf065d3c275dfa6a3c4614c9065d54c98773f576108d` |
+| `AddRecord(address indexed caller, uint64 registryId, uint64 recordId, uint64 index, string checksum)` | `0x1a3295fa8cc0e28c95d21912c9e6958f3bc740231781f7640ad885c972a352fd` |
+| `UpdateRecordStatus(address indexed caller, uint64 registryId, uint64 recordId, uint64 index, string status)` | `0xd7b75457d41293eab4829975c951ce8c53106866f0c429d175fc6c91cdad5ade` |
+| `GrantRole(address indexed caller, uint64 registryId, string checksum, address account, string role)` | `0x0f49e365baf90deb7d1f63e576637907e12d1ddc75d1ac68894a2bcd192b6ddb` |
+| `RevokeRole(address indexed caller, uint64 registryId, string checksum, address account, string role)` | `0x8236b76cce80eaf69b54d89268d00fda3dec9e5e054f1548ebbb1f8b20b3b08b` |
 
 <Note>
 Only the caller is indexed. `registryId`/`recordId` live in the log data, so they can be decoded from a receipt but cannot be used as an `eth_getLogs` topic filter.
@@ -129,29 +144,58 @@ Only the caller is indexed. `registryId`/`recordId` live in the log data, so the
 
 ## Registry Name Index
 
-Registries are addressed by `id` on chain; names are not unique and have no on-chain index. Name search is an **opt-in, per-node, off-chain** SQLite index.
+Registries are addressed by `id` on chain; names are not unique and have no on-chain index. **Exact-match** name lookup is on-chain, through `registriesByName` (matchMode 0 or 1). **Prefix, suffix, and contains are off-chain only** — calling `registriesByName` with matchMode 2/3/4 reverts on-chain with `"only exact match is on chain; search prefix/suffix/contains off chain"`.
 
-- **Enable:** `enabled = true` under `[anchoring-name-index]` in `app.toml` (`db-path` defaults to `data/anchoring_name_index.db`). Off by default.
-- **Query modes:** `EXACT`, `PREFIX`, `SUFFIX`, or `CONTAINS`, matched case-insensitively (ASCII case-folded), with offset/limit paging (default 50, max 200). `CONTAINS` requires at least 3 characters. Nodes without the index answer `FailedPrecondition`.
-- **Access:** Cosmos callers use `Query/SearchRegistriesByName` (REST `.../anchoring/v1/registries/search`). EVM callers use the `registriesByName` precompile method, which is served only via `eth_call`/`eth_estimateGas` from an EOA (`msg.sender == tx.origin`, no contract code) — a transaction reverts with `registriesByName is query-only: use eth_call, not a transaction`.
-- **Consistency:** The index is **not consensus state** — it is derived from the on-chain registry collection, nodes need not run it, and two nodes can briefly differ while one catches up after a restart.
+Fuzzy search is served by an opt-in, per-node RocksDB index (a reth Execution Extension watching the contract's registry count and names directly out of state — not out of event logs, so it also indexes registries loaded via a state dump rather than a transaction) over a dedicated JSON-RPC namespace:
 
-# Usage Examples (EVM)
+- **Enable:** pass `--anchoring.name-index` to the node (optionally `--anchoring.name-index.path <PATH>` to relocate it; defaults to `anchoring-name-index/` under the node's datadir). Off by default.
+- **Query:** `anchoring_searchRegistriesByName`
+
+  ```bash
+  cast rpc anchoring_searchRegistriesByName \
+    '{"name":"Test","mode":"prefix","offset":0,"limit":50}' \
+    --rpc-url http://127.0.0.1:8545
+  ```
+
+  `mode` is one of `exact` (the default), `prefix`, `suffix`, or `contains`, matched case-insensitively (ASCII case-folded). `contains` requires at least 3 characters. Response:
+
+  ```json
+  {"registries":[{"id":1,"name":"Test Registry","description":"...","creator":"nvnm1...","createdAt":"...","metadata":"{}"}]}
+  ```
+
+- **Status:** `anchoring_nameIndexStatus` — reports how far the index has caught up:
+
+  ```json
+  {"lastId":1,"registryCount":1,"blockNumber":203,"blockHash":"0x..."}
+  ```
+
+- **Consistency:** the index is **not consensus state** — it's derived from the on-chain registry collection, nodes need not run it, and two nodes can briefly differ while one catches up after a restart or reorg.
+
+# Usage Examples
 
 ## Creating a Registry
 
 ```python
-DOCUMENT_PRECOMPILE = ContractAsync.from_abi(DOCUMENT_PRECOMPILE_ABI)
-DOCUMENT_ADDRESS = "0x0000000000000000000000000000000000000A00"
+ANCHORING = ContractAsync.from_abi(ANCHORING_ABI)
+ANCHORING_ADDRESS = "0x0000000000000000000000000000000000000A00"
 
-receipt = await DOCUMENT_PRECOMPILE.fns.addRegistry(
+receipt = await ANCHORING.fns.addRegistry(
     "my-registry",
     "A registry for document anchoring",
     '{"owner": "NVNM Foundation"}',  # metadata (JSON string)
-).transact(w3, admin_account, to=DOCUMENT_ADDRESS, gas=100_000)
+).transact(w3, admin_account, to=ANCHORING_ADDRESS, gas=100_000)
 
 # registryId is only returned directly from an eth_call/dry-run;
 # from a mined tx, decode it from the AddRegistry log in the receipt.
+```
+
+Equivalent with `cast`:
+
+```bash
+cast send 0x0000000000000000000000000000000000000A00 \
+  "addRegistry(string,string,string)" \
+  "my-registry" "A registry for document anchoring" '{"owner":"NVNM Foundation"}' \
+  --private-key $KEY --rpc-url $RPC_URL
 ```
 
 ## Adding a Record
@@ -161,7 +205,7 @@ record = (
     "ipfs://QmABC123...",   # uri
     "abc123def456",         # checksum
     "sha256",               # checksumAlgo
-    '{"document": "..."}',  # metadata (JSON string)
+    '{"document": "..."}',  # metadata (JSON string) — "{}" is rejected
     "",                     # timestamp (chain sets this)
     "active",               # status
     0,                      # recordId (chain sets this)
@@ -170,8 +214,8 @@ record = (
     registry_id,            # registryId — the registry this record belongs to
 )
 
-receipt = await DOCUMENT_PRECOMPILE.fns.addRecord(record).transact(
-    w3, admin_account, to=DOCUMENT_ADDRESS, gas=100_000
+receipt = await ANCHORING.fns.addRecord(record).transact(
+    w3, admin_account, to=ANCHORING_ADDRESS, gas=100_000
 )
 ```
 
@@ -180,139 +224,54 @@ receipt = await DOCUMENT_PRECOMPILE.fns.addRecord(record).transact(
 ```python
 pagination = (b"", 0, 100, False, False)
 
-records, page_response = await DOCUMENT_PRECOMPILE.fns.records(
+records, page_response = await ANCHORING.fns.records(
     registry_id,    # filter by registryId (0 = ignore)
     "",             # filter by checksum (empty string = all)
     0,              # recordId (0 = ignore)
     0,              # index (0 = ignore)
     pagination
-).call(w3, to=DOCUMENT_ADDRESS)
+).call(w3, to=ANCHORING_ADDRESS)
 ```
 
 ## Querying Registries by Name
 
+**Exact match — on-chain:**
+
 ```python
-# matchMode: 0/1 exact, 2 prefix, 3 suffix, 4 contains
-registries, page_response = await DOCUMENT_PRECOMPILE.fns.registriesByName(
+# matchMode 0 or 1 only; 2/3/4 revert on-chain
+registries, page_response = await ANCHORING.fns.registriesByName(
     "my-registry",
     1,              # EXACT
     pagination
-).call(w3, to=DOCUMENT_ADDRESS)
+).call(w3, to=ANCHORING_ADDRESS)
 ```
 
-<Note>
-`registriesByName` only works with `.call()` (`eth_call`), only for an EOA caller, and only on a node with the name index enabled — see [Registry Name Index](#registry-name-index).
-</Note>
+**Prefix/suffix/contains — off-chain, only on a node running the name index:**
+
+```bash
+cast rpc anchoring_searchRegistriesByName \
+  '{"name":"my-reg","mode":"prefix"}' \
+  --rpc-url $RPC_URL
+```
 
 ## Granting a Role
 
 ```python
 # Grant registry-level editor role (empty checksum = registry scope)
-await DOCUMENT_PRECOMPILE.fns.grantRole(
+await ANCHORING.fns.grantRole(
     registry_id,
     "",              # empty = registry-level
-    user_address,    # EVM address
+    user_address,
     "editor"
-).transact(w3, admin_account, to=DOCUMENT_ADDRESS)
+).transact(w3, admin_account, to=ANCHORING_ADDRESS)
 
 # Grant record-level admin role (specific checksum)
-await DOCUMENT_PRECOMPILE.fns.grantRole(
+await ANCHORING.fns.grantRole(
     registry_id,
     "abc123def456",  # specific document checksum
     user_address,
     "admin"
-).transact(w3, admin_account, to=DOCUMENT_ADDRESS)
-```
-
-# Usage Example (COSMOS TX)
-
-Registries are referenced by their assigned `registry_id`, which the chain only allocates when `MsgAddRegistry` executes — it cannot be predicted inside the same batched transaction. Create the registry first, read `registry_id` back from the response, then submit `MsgAddRecord` in a second transaction.
-
-**1. Create the registry:**
-
-```jsonc
-{
-    "body": {
-        "messages": [
-            {
-                "@type": "/nvnmchain.anchoring.v1.MsgAddRegistry",
-                "sender": "<WALLET_ADDRESS>",
-                "name": "<NAME OF REGISTRY>",
-                "description": "<DESCRIPTION>",
-                "metadata": "{\"owner\":\"NVNM Foundation\", \"purpose\":\"Protocol Documentation\", \"website\":\"https://nvnmchain.io\"}"
-            }
-        ],
-        "memo": "Creating the registry for the NVNM Chain Whitepaper.",
-        "timeout_height": "0",
-        "unordered": false,
-        "timeout_timestamp": null,
-        "extension_options": [],
-        "non_critical_extension_options": []
-    },
-    "auth_info": {
-        "signer_infos": [],
-        "fee": {
-            "amount": [
-                {
-                    "denom": "ibc/93575DF9D4BC5B2C85D967DE020E5DEA1863FDD108AD509A36DA6C83E3398227",
-                    "amount": "0"
-                }
-            ],
-            "gas_limit": "3000000",
-            "payer": "",
-            "granter": ""
-        },
-        "tip": null
-    },
-    "signatures": []
-}
-```
-
-The `MsgAddRegistryResponse` returns `registry_id`. Read it from the tx result.
-
-**2. Add the record, using the returned `registry_id`:**
-
-```jsonc
-{
-    "body": {
-        "messages": [
-            {
-                "@type": "/nvnmchain.anchoring.v1.MsgAddRecord",
-                "sender": "<WALLET_ADDRESS>",
-                "record": {
-                    "registry_id": "<REGISTRY_ID FROM STEP 1>",
-                    "uri": "<IPFS or other URL RECORD>",
-                    "checksum": "<SHA256SUM RECOMMENDED>",
-                    "checksum_algo": "sha256",
-                    "metadata": "{\"version\":\"1.0\",\"title\":\"NVNM Chain Whitepaper\",\"author\":\"Albert Berdellans\",\"organization\":\"NVNM Labs\",\"date\":\"May 2026\",\"summary\":\"Accountability infrastructure for agentic activity\"}",
-                    "status": "active"
-                }
-            }
-        ],
-        "memo": "Anchoring the initial May 2026 NVNM Chain Whitepaper authored by Inveniam.",
-        "timeout_height": "0",
-        "unordered": false,
-        "timeout_timestamp": null,
-        "extension_options": [],
-        "non_critical_extension_options": []
-    },
-    "auth_info": {
-        "signer_infos": [],
-        "fee": {
-            "amount": [
-                {
-                    "denom": "ibc/93575DF9D4BC5B2C85D967DE020E5DEA1863FDD108AD509A36DA6C83E3398227",
-                    "amount": "0"
-                }
-            ],
-            "gas_limit": "3000000",
-            "payer": "",
-            "granter": ""
-        },
-        "tip": null
-    },
-    "signatures": []
-}
+).transact(w3, admin_account, to=ANCHORING_ADDRESS)
 ```
 
 ## Error Handling
@@ -322,7 +281,10 @@ The `MsgAddRegistryResponse` returns `registry_id`. Read it from the tx result.
 | Non-admin calls `grantRole` or `revokeRole` | Transaction reverts (missing admin role) |
 | `addRecord`/`updateRecordStatus` without `admin` or `editor` | Transaction reverts (unauthorized) |
 | `addRecord` with a non-existent `registryId` | Transaction reverts |
-| `registriesByName` sent as a transaction instead of `eth_call` | Transaction reverts (`registriesByName is query-only`) |
-| `registriesByName` called by a contract, or when the name index is disabled on the node | Transaction reverts |
+| `addRecord` with `metadata` empty or `"{}"` | Transaction reverts (`"metadata cannot be empty"`) |
+| Caller is a contract (not an EOA / EIP-7702 delegation) | Transaction reverts (`"sender not an eoa"`) |
+| `registriesByName` with `matchMode` 2/3/4 (prefix/suffix/contains) | Transaction reverts (`"only exact match is on chain; search prefix/suffix/contains off chain"`) |
+| `anchoring_searchRegistriesByName` called on a node without `--anchoring.name-index` | RPC method not found — the namespace isn't registered |
 | Query for a non-existent registry or checksum | Returns empty result |
 | Granting an already-held role | Succeeds (idempotent) |
+| Calling this address on a chain that never installed the contract | Behaves like calling an empty account — no code, no revert reason |
