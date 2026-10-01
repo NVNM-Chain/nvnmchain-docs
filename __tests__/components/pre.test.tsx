@@ -35,3 +35,27 @@ describe('Pre', () => {
     await expect(user.click(btn)).resolves.not.toThrow()
   })
 })
+
+describe('Pre with a title', () => {
+  it('renders the title as a header above the code', () => {
+    render(<Pre title="apps/web/src/lib/tip20.ts"><code>const x = 1</code></Pre>)
+    const header = screen.getByText('apps/web/src/lib/tip20.ts')
+    expect(header).toBeVisible()
+    expect(header.compareDocumentPosition(document.querySelector('pre')!)).toBe(Node.DOCUMENT_POSITION_FOLLOWING)
+  })
+
+  it('does not pass the title through as a <pre> tooltip', () => {
+    render(<Pre title="file.ts"><code>sample</code></Pre>)
+    expect(document.querySelector('pre')).not.toHaveAttribute('title')
+  })
+
+  it('reserves room on the right of the header for the copy button', () => {
+    render(<Pre title="a long code block title"><code>sample</code></Pre>)
+    expect(screen.getByText('a long code block title')).toHaveClass('pr-24')
+  })
+
+  it('renders no header without a title', () => {
+    const { container } = render(<Pre><code>sample</code></Pre>)
+    expect(container.querySelector('pre')?.previousElementSibling).toBeNull()
+  })
+})

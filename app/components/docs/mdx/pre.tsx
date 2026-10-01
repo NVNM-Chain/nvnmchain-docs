@@ -27,7 +27,7 @@ export function Pre({ children, className, title, 'data-language': language, ...
       <div className="relative rounded-lg border border-border bg-muted/30 dark:bg-[#0d0d0f] overflow-hidden">
         {/* File name from the code fence's title="..." meta */}
         {title && (
-          <div className="px-4 py-2 border-b border-border bg-[#f3f4f6] dark:bg-[#1f2937] text-xs font-mono text-muted-foreground">
+          <div className="pl-4 pr-24 py-2 border-b border-border bg-[#f3f4f6] dark:bg-[#1f2937] text-xs font-mono text-muted-foreground">
             {title}
           </div>
         )}
@@ -47,6 +47,7 @@ export function Pre({ children, className, title, 'data-language': language, ...
         {/* Copy button - positioned in top right */}
         <button
           onClick={handleCopy}
+          aria-label="Copy code"
           className={cn(
             'absolute right-2 flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium transition-all',
             title ? 'top-1' : 'top-2',
