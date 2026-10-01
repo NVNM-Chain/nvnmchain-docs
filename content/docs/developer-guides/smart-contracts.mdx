@@ -1,0 +1,582 @@
+---
+title: "Deploy and interact with smart contracts"
+description: "Deploy Solidity contracts to NVNM Chain with Foundry, then read and write them from a React app with wagmi."
+icon: "code"
+---
+
+NVNM Chain NEXT runs Tempo EVM. You write, deploy, and call contracts with the same tools you use on Ethereum. This guide walks you through the demo dApp's `CheckIn` contract. You deploy it with Foundry, then read and write it from a React app.
+
+<Tip title="Try the demo dApp">
+  Open the live [NVNM demo dApp](https://nvnm-chain.github.io/nvnm-demo-dapp/) and use its **Check in** card. The code samples on this page come from the demo dApp's source ([NVNM-Chain/nvnm-demo-dapp](https://github.com/NVNM-Chain/nvnm-demo-dapp) on GitHub). A sample taken from the dApp shows its file path in the header above the code.
+</Tip>
+
+## How Tempo EVM differs from Ethereum
+
+Tempo describes its EVM compatibility like this:
+
+> Tempo is fully compatible with the Ethereum Virtual Machine (EVM), targeting the **Osaka** EVM hard fork. Developers can deploy and interact with smart contracts using the same tools, languages, and frameworks they use on Ethereum, such as Solidity, Foundry, and Hardhat. All Ethereum JSON-RPC methods work out of the box.
+
+The differences that matter for contract code and deployments:
+
+| Area | Tempo behavior | Source |
+| --- | --- | --- |
+| `BALANCE` and `SELFBALANCE` | Always return 0. Use TIP-20 `balanceOf` instead. | [EVM compatibility](https://tempo.xyz/developers/docs/quickstart/evm-compatibility) |
+| `CALLVALUE` (`msg.value`) | Always returns 0. There is no alternative. | [EVM compatibility](https://tempo.xyz/developers/docs/quickstart/evm-compatibility) |
+| New storage slot (`SSTORE` 0 to non-zero) | 250,000 gas (Ethereum: 20,000) | [EVM compatibility](https://tempo.xyz/developers/docs/quickstart/evm-compatibility) |
+| Account creation | 250,000 gas (Ethereum: 0) | [EVM compatibility](https://tempo.xyz/developers/docs/quickstart/evm-compatibility) |
+| Contract creation | `(code_size × 1,000) + 500,000` gas, for both `CREATE` and `CREATE2` | [TIP-1000](https://tempo.xyz/developers/docs/protocol/tips/tip-1000) |
+| First transaction from an account (nonce 0) | Must supply at least 271,000 gas | [TIP-1000](https://tempo.xyz/developers/docs/protocol/tips/tip-1000) |
+| Transaction gas cap | 30M gas, to fit 24 KB contract deployments | [TIP-1000](https://tempo.xyz/developers/docs/protocol/tips/tip-1000) |
+
+Tempo sums up the impact: "contract deployments cost 5-10x more than on Ethereum. Update your `gas_limit` estimates accordingly." Tempo also notes that transactions above 16,000,000 gas are not recommended. The 30M cap exists only for maximum-size deployments ([TIP-1010](https://tempo.xyz/developers/docs/protocol/tips/tip-1010)).
+
+Because there is no native token, the demo dApp's contract guidelines say: don't design around `msg.value`, `payable` ETH transfers, or `address.balance`. Value moves in TIP-20 stablecoins, which are ERC-20 compatible and use **6 decimals** (from `packages/contracts/CLAUDE.md`).
+
+### Which token pays for contract calls
+
+Tempo picks each transaction's fee token from a preference order. It checks the transaction's `fee_token`, then the fee payer's account preference, then rules for certain TIP-20 and Stablecoin DEX calls, and falls back to pathUSD. See [Which token pays the fee](/developer-guides/token-balances-and-fees#which-token-pays-the-fee) for the full order.
+
+For contracts like `CheckIn`, Tempo's [EVM compatibility](https://tempo.xyz/developers/docs/quickstart/evm-compatibility) page says:
+
+> If the user is calling a contract that is not a TIP-20 token, the EVM transaction will default to the pathUSD token.
+
+On NVNM Chain, that fallback token is **nUSD**, so your deployer and your users need a nUSD balance to send contract transactions. See [How fees work](/developer-guides/token-balances-and-fees#how-fees-work) for its address.
+
+## Deploy a contract with Foundry
+
+### Install Foundry
+
+Tempo is a first-class network in upstream Foundry. Install or update it with `foundryup`:
+
+```bash
+curl -L https://foundry.paradigm.xyz | bash
+foundryup
+```
+
+<Warning>
+  Tempo's docs state: "`tempo-foundry` and `foundryup -n tempo` are deprecated. Switch to the latest upstream Foundry release with `foundryup`." Some older guides, including a note in the demo dApp's `packages/contracts/CLAUDE.md`, still mention `tempo-foundry`.
+</Warning>
+
+To use Tempo-specific features in an existing project, Tempo recommends installing [`tempo-std`](https://github.com/tempoxyz/tempo-std) and setting `tempo = true` in `foundry.toml`:
+
+```bash
+forge install tempoxyz/tempo-std
+```
+
+```toml title="foundry.toml (from Tempo docs)"
+[profile.default]
+tempo = true
+```
+
+Tempo says this flag "enables Tempo-specific network behavior while still letting Foundry resolve the right semantics from the chain you are targeting." The demo dApp's `CheckIn` project doesn't set it. Learn more in the [Tempo Foundry docs](https://tempo.xyz/developers/docs/sdk/foundry).
+
+### Configure the project
+
+The demo dApp's Foundry config targets the Osaka EVM and defines an RPC alias for each NVNM network:
+
+```toml title="packages/contracts/foundry.toml"
+[profile.default]
+src = "src"
+out = "out"
+libs = ["lib"]
+solc_version = "0.8.30"
+# NVNM Chain runs Tempo EVM (tempo/v1.14.x); Osaka opcodes (incl. CLZ) verified on devnet.
+evm_version = "osaka"
+optimizer = true
+optimizer_runs = 200
+via_ir = true
+
+# NVNM Chain NEXT L1 — keep in sync with apps/web/src/config/chains.ts
+[rpc_endpoints]
+nvnm_testnet = "https://rpc.nvnm.testnet.nvnmchain.io" # chain id 787223
+nvnm_devnet = "https://rpc.nvnm.canary.mantrachain.dev" # chain id 787222
+
+# ...
+```
+
+View on GitHub: [`packages/contracts/foundry.toml`](https://github.com/NVNM-Chain/nvnm-demo-dapp/blob/main/packages/contracts/foundry.toml)
+
+You can now pass `--rpc-url nvnm_devnet` or `--rpc-url nvnm_testnet` instead of a full URL. For all endpoints, see [Network details](/resources/network-details).
+
+### Write the contract
+
+`CheckIn` lets each address check in once with a short text. Each record is immutable and keeps its 1-based position in the global order. The text limit counts **UTF-8 bytes, not characters**: 128 ASCII characters fit, but only about 42 CJK characters.
+
+```solidity title="packages/contracts/src/CheckIn.sol"
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.13;
+
+/// @title CheckIn (打卡)
+/// @notice Each address can check in once with a short text. The record is immutable and carries its
+///         1-based position in the global check-in order.
+contract CheckIn {
+    /// @notice Maximum text length in bytes (UTF-8), not characters: a CJK character takes 3 bytes.
+    uint256 public constant MAX_TEXT_LENGTH = 128;
+
+    struct Record {
+        string text;
+        uint256 index;
+    }
+
+    /// @notice Number of check-ins so far; also the index of the most recent one.
+    uint256 public totalCheckIns;
+
+    mapping(address => Record) private _records;
+
+    event CheckedIn(address indexed user, uint256 indexed index, string text);
+
+    error AlreadyCheckedIn(address user, uint256 index);
+    error TextTooLong(uint256 length, uint256 maxLength);
+
+    /// @notice Records `text` for the caller. Reverts if the caller has already checked in.
+    /// @return index The caller's position in the check-in order, starting from 1.
+    function checkIn(string calldata text) external returns (uint256 index) {
+        uint256 existing = _records[msg.sender].index;
+        if (existing != 0) revert AlreadyCheckedIn(msg.sender, existing);
+        uint256 length = bytes(text).length;
+        if (length > MAX_TEXT_LENGTH) revert TextTooLong(length, MAX_TEXT_LENGTH);
+
+        index = ++totalCheckIns;
+        _records[msg.sender] = Record(text, index);
+        emit CheckedIn(msg.sender, index, text);
+    }
+
+    /// @notice Returns `user`'s check-in. An `index` of 0 means `user` has not checked in.
+    function getCheckIn(address user) external view returns (string memory text, uint256 index) {
+        Record storage record = _records[user];
+        return (record.text, record.index);
+    }
+}
+```
+
+View on GitHub: [`packages/contracts/src/CheckIn.sol`](https://github.com/NVNM-Chain/nvnm-demo-dapp/blob/main/packages/contracts/src/CheckIn.sol)
+
+The contract is plain Solidity. It uses no `payable` functions and no native balances, so it needs no changes for Tempo EVM.
+
+Each check-in writes new storage slots. On Tempo, each new slot costs 250,000 gas, so a check-in costs more gas than it would on Ethereum.
+
+### Test locally
+
+Run the standard Foundry workflow from `packages/contracts`:
+
+```bash
+forge build
+forge test -vvv
+```
+
+The demo dApp's tests use `forge-std` only. See `packages/contracts/test/CheckIn.t.sol`. For a local node with Tempo behavior, Tempo documents Anvil's Tempo mode:
+
+```bash
+# Start anvil in Tempo mode
+anvil --tempo
+
+# Fork a live network for local testing
+anvil --tempo --fork-url $RPC_URL
+```
+
+### Write the deploy script
+
+The deploy script uses `CREATE2` through the deterministic deployer at `0x4e59b44847b379578588920cA78FbF26c0B4956C`. Tempo lists this Arachnid Create2 Factory as a [predeployed contract](https://tempo.xyz/developers/docs/quickstart/predeployed-contracts). The address depends only on the salt and the bytecode, so `CheckIn` lands at the same address on every chain. If the contract already exists at that address, the script logs it and sends nothing.
+
+```solidity title="packages/contracts/script/CheckIn.s.sol"
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.13;
+
+import { Script, console } from "forge-std/Script.sol";
+import { CheckIn } from "../src/CheckIn.sol";
+
+/// @notice Deploys CheckIn with CREATE2 through the deterministic deployer (0x4e59b448…956C), so the address
+///         depends only on the salt and the bytecode and is the same on every chain.
+contract CheckInScript is Script {
+    bytes32 public constant DEFAULT_SALT = keccak256("nvnm-demo-dapp.CheckIn");
+
+    CheckIn public checkIn;
+
+    function setUp() public { }
+
+    function run() public {
+        // Forge loads packages/contracts/.env. Set CHECKIN_SALT to deploy a fresh instance.
+        bytes32 salt = vm.envOr("CHECKIN_SALT", DEFAULT_SALT);
+        address expected = vm.computeCreate2Address(salt, keccak256(type(CheckIn).creationCode));
+        if (expected.code.length != 0) {
+            console.log("CheckIn already deployed at", expected);
+            checkIn = CheckIn(expected);
+            return;
+        }
+
+        // Without DEPLOYER_PRIVATE_KEY, broadcast as the default sender: `--account <keystore>` if given,
+        // otherwise anvil's prefunded account #0.
+        uint256 deployerKey = vm.envOr("DEPLOYER_PRIVATE_KEY", uint256(0));
+        if (deployerKey == 0) vm.startBroadcast();
+        else vm.startBroadcast(deployerKey);
+
+        checkIn = new CheckIn{ salt: salt }();
+
+        vm.stopBroadcast();
+        console.log("CheckIn deployed at", address(checkIn));
+    }
+}
+```
+
+View on GitHub: [`packages/contracts/script/CheckIn.s.sol`](https://github.com/NVNM-Chain/nvnm-demo-dapp/blob/main/packages/contracts/script/CheckIn.s.sol)
+
+<Note>
+  Tempo's draft [TIP-1047](https://tempo.xyz/developers/docs/protocol/tips/tip-1047) proposes rejecting any `CREATE`, `CREATE2`, or EIP-7702 authorization "that would produce or delegate to an address starting with the TIP-20 token prefix (`0x20C000000000000000000000`)". Tempo lists its status as Draft.
+</Note>
+
+### Choose a fee token (optional)
+
+Foundry's Tempo support adds a `--tempo.fee-token <ADDRESS>` flag to `forge script`, `forge create`, and `cast`. It sets the TIP-20 token that pays the transaction fee. Add it to the broadcast command if you want to pay in a token other than the default. The demo dApp doesn't use it. For the full list of `--tempo.*` flags, see the [Tempo Foundry docs](https://tempo.xyz/developers/docs/sdk/foundry).
+
+### Run the deployment
+
+<Steps>
+  <Step title="Configure the deployer">
+    Set a key in `packages/contracts/.env`, or leave it unset and use a Foundry keystore. The `.env` file is gitignored. Never commit a real key.
+
+    ```bash
+    cp .env.example .env # then set DEPLOYER_PRIVATE_KEY
+    ```
+
+    To use a keystore instead:
+
+    ```bash
+    cast wallet import nvnm-deployer --interactive
+    ```
+
+    | Variable | Default | What |
+    | --- | --- | --- |
+    | `DEPLOYER_PRIVATE_KEY` | unset: `--account`, or anvil account #0 | Key that signs the deployment |
+    | `CHECKIN_SALT` | `keccak256("nvnm-demo-dapp.CheckIn")` | `CREATE2` salt. Change it to deploy a fresh instance. |
+
+    Tempo requires a root key for deployments: "Access keys can sign calls but not deployments." Ledger and Trezor wallets are not yet compatible with any `--tempo.*` option.
+  </Step>
+
+  <Step title="Fund the deployer">
+    Gas is paid in a TIP-20 stablecoin, not a native token. Fund the deployer address from the network faucet before you broadcast:
+
+    - Testnet: [nUSD faucet](/getting-started/nusd-faucet-testnet)
+    - Devnet: [nUSD faucet](/developer-guides/pathusd-faucet-devnet)
+  </Step>
+
+  <Step title="Dry run">
+    Omit `--broadcast` to simulate the script. The output shows the address `CheckIn` will be deployed to.
+
+    ```bash
+    forge script script/CheckIn.s.sol --rpc-url nvnm_devnet
+    ```
+  </Step>
+
+  <Step title="Broadcast">
+    Add `--broadcast` and `--skip-simulation`:
+
+    ```bash
+    # Key from .env
+    forge script script/CheckIn.s.sol --rpc-url nvnm_devnet --broadcast --skip-simulation
+
+    # Keystore
+    forge script script/CheckIn.s.sol --rpc-url nvnm_devnet --broadcast --skip-simulation --account nvnm-deployer
+    ```
+
+    Use `--rpc-url nvnm_testnet` for Testnet. The demo dApp wraps these commands as `deploy:devnet` and `deploy:testnet` in `packages/contracts/package.json`.
+  </Step>
+</Steps>
+
+<Warning title="Why --skip-simulation">
+  The demo dApp's contracts README (`packages/contracts/README.md`) explains: "Tempo EVM charges much more gas for creating state than stock Foundry models. Foundry's local estimate for CheckIn is ~320k gas; the chain needs ~1.77M on devnet and ~2.02M on testnet. With the simulation, broadcasts fail with `call gas cost … exceeds the gas limit` or run out of gas. Skipping it makes Forge ask the node for the gas limit." This matches Tempo's [TIP-1000](https://tempo.xyz/developers/docs/protocol/tips/tip-1000) pricing, which charges 500,000 gas per contract creation plus 1,000 gas per byte of code.
+</Warning>
+
+### Check the deployment
+
+Use `cast` to confirm that code exists at the address and to call a view function:
+
+```bash
+# Check that the contract is deployed
+cast code 0xDF0555AFd6573Ad1426ACa5f834A3E1bfee71a49 \
+  --rpc-url https://rpc.nvnm.canary.mantrachain.dev
+
+# Read the total number of check-ins
+cast call 0xDF0555AFd6573Ad1426ACa5f834A3E1bfee71a49 "totalCheckIns()(uint256)" \
+  --rpc-url https://rpc.nvnm.canary.mantrachain.dev
+```
+
+The demo dApp's `CheckIn` is deployed at the same address on both networks:
+
+| Network | Chain ID | `CheckIn` address |
+| --- | --- | --- |
+| NVNM Tempo Devnet 1 | `787222` | `0xDF0555AFd6573Ad1426ACa5f834A3E1bfee71a49` |
+| NVNM Tempo Testnet 1 | `787223` | `0xDF0555AFd6573Ad1426ACa5f834A3E1bfee71a49` |
+
+The address is the same, but each network keeps its own check-ins and its own count.
+
+<Note title="Contract verification">
+  Tempo's verification service at `contracts.tempo.xyz` lists only Tempo's own networks (chain IDs `4217`, `42431`, and `31318`), not NVNM chain IDs. The demo dApp doesn't document a verification step. See [Verify contracts](https://tempo.xyz/developers/docs/quickstart/verify-contracts) in the Tempo docs.
+</Note>
+
+## Interact from a React app
+
+Tempo ships [TypeScript SDK extensions](https://tempo.xyz/developers/docs/sdk/typescript) for Viem and Wagmi. Tempo recommends Wagmi for applications and wallets, and Viem for scripts and servers. The demo dApp uses wagmi v3 with the standard `useReadContract` and `useWriteContract` hooks.
+
+<Note>
+  wagmi v3 renames some hooks. Use `useConnection` instead of `useAccount`. Mutation hooks such as `useWriteContract` run through `.mutate`.
+</Note>
+
+### Generate typed ABIs
+
+The wagmi CLI's Foundry plugin reads the compiled contracts and writes a typed ABI and per-chain addresses to `src/generated.ts`. List each deployed address by chain ID:
+
+```ts title="apps/web/wagmi.config.ts"
+import { defineConfig } from "@wagmi/cli";
+import { foundry } from "@wagmi/cli/plugins";
+
+// Generates typed ABIs from the Foundry project into src/generated.ts.
+// Run `vp run web#codegen` after changing contracts.
+export default defineConfig({
+  out: "src/generated.ts",
+  plugins: [
+    foundry({
+      project: "../../packages/contracts",
+      include: ["CheckIn.sol/**"],
+      // Deployed addresses per chain id. CheckIn uses CREATE2, so the address is the same on every chain.
+      deployments: {
+        CheckIn: {
+          787222: "0xDF0555AFd6573Ad1426ACa5f834A3E1bfee71a49",
+          787223: "0xDF0555AFd6573Ad1426ACa5f834A3E1bfee71a49",
+        },
+      },
+    }),
+  ],
+});
+```
+
+View on GitHub: [`apps/web/wagmi.config.ts`](https://github.com/NVNM-Chain/nvnm-demo-dapp/blob/main/apps/web/wagmi.config.ts)
+
+Run `wagmi generate` (the demo dApp's `codegen` script) after every contract change. It runs `forge build` first. Don't edit the output by hand.
+
+The output exports `checkInAbi`, `checkInAddress`, and `checkInConfig`. The demo dApp uses only the Foundry plugin, so it generates no React hooks:
+
+```ts title="apps/web/src/generated.ts"
+export const checkInAbi = [
+  // ...
+  {
+    type: 'function',
+    inputs: [{ name: 'text', internalType: 'string', type: 'string' }],
+    name: 'checkIn',
+    outputs: [{ name: 'index', internalType: 'uint256', type: 'uint256' }],
+    stateMutability: 'nonpayable',
+  },
+  // ...
+] as const
+
+// ...
+export const checkInAddress = {
+  787222: '0xDF0555AFd6573Ad1426ACa5f834A3E1bfee71a49',
+  787223: '0xDF0555AFd6573Ad1426ACa5f834A3E1bfee71a49',
+} as const
+```
+
+View on GitHub: [`apps/web/src/generated.ts`](https://github.com/NVNM-Chain/nvnm-demo-dapp/blob/main/apps/web/src/generated.ts)
+
+### Read contract state
+
+Pass the generated ABI and the address for the current chain to `useReadContract`. The demo dApp polls with `refetchInterval` rather than `watch`, because watcher errors never reach the query result:
+
+```ts title="apps/web/src/hooks/use-check-in.ts"
+import type { Address } from "viem";
+import { useReadContract } from "wagmi";
+
+import type { SupportedChainId } from "@/config/wagmi";
+import { checkInAbi, checkInAddress } from "@/generated";
+
+// Reads of the CheckIn contract (`packages/contracts/src/CheckIn.sol`), deployed at one CREATE2 address on every
+// supported chain. Each passes the same query options wherever it's called, so wagmi shares one query per chain (and
+// account).
+
+// The account's check-in as `[text, index]`; an index of 0 means it hasn't checked in. Polled while it hasn't, so a
+// check-in made elsewhere (another tab, or a node that lagged behind the receipt) still shows up; a check-in can't
+// change afterwards.
+export function useCheckInRecord(account: Address, chainId: SupportedChainId) {
+  return useReadContract({
+    address: checkInAddress[chainId],
+    abi: checkInAbi,
+    functionName: "getCheckIn",
+    args: [account],
+    chainId,
+    query: {
+      refetchInterval: (query) => (query.state.data?.[1] ? false : 4_000),
+      retry: 1,
+    },
+  });
+}
+
+// How many addresses have checked in on the chain. Polled (not `watch`, whose errors never reach the query result) so
+// other people's check-ins show up.
+export function useTotalCheckIns(chainId: SupportedChainId) {
+  return useReadContract({
+    address: checkInAddress[chainId],
+    abi: checkInAbi,
+    functionName: "totalCheckIns",
+    chainId,
+    query: { refetchInterval: 4_000, retry: 1 },
+  });
+}
+
+// The contract's text limit, in UTF-8 bytes. A constant, so it's read once per chain.
+export function useCheckInMaxLength(chainId: SupportedChainId) {
+  return useReadContract({
+    address: checkInAddress[chainId],
+    abi: checkInAbi,
+    functionName: "MAX_TEXT_LENGTH",
+    chainId,
+    query: { staleTime: Infinity, select: Number },
+  });
+}
+```
+
+View on GitHub: [`apps/web/src/hooks/use-check-in.ts`](https://github.com/NVNM-Chain/nvnm-demo-dapp/blob/main/apps/web/src/hooks/use-check-in.ts)
+
+### Validate input before you send
+
+The contract limits `bytes(text).length`, the UTF-8 length. JavaScript's `text.length` counts UTF-16 code units instead, so count bytes with `TextEncoder`:
+
+```ts title="apps/web/src/lib/check-in.ts"
+const encoder = new TextEncoder();
+
+// The length CheckIn limits: `bytes(text).length`, the UTF-8 encoding's length. Not `text.length`, which counts UTF-16
+// code units: "打卡" is 2 of those but 6 bytes, and an emoji is 2 code units but 4 bytes.
+export function utf8ByteLength(text: string): number {
+  return encoder.encode(text).length;
+}
+
+// ...
+```
+
+View on GitHub: [`apps/web/src/lib/check-in.ts`](https://github.com/NVNM-Chain/nvnm-demo-dapp/blob/main/apps/web/src/lib/check-in.ts)
+
+### Write to the contract
+
+Call `useWriteContract().mutate` with the same ABI and address. The wallet signs and sends the transaction, and `write.data` holds its hash:
+
+```tsx title="apps/web/src/components/check-in.tsx"
+function AccountCheckIn({ account, chain }: { account: Address; chain: SupportedChain }) {
+  // ...
+  const record = useCheckInRecord(account, chain.id);
+  const { refetch: refetchRecord } = record;
+  const { refetch: refetchTotal } = useTotalCheckIns(chain.id);
+  const write = useWriteContract();
+  // Shares the queries TxResultDialog runs for the same hash.
+  const outcome = useTxOutcome(write.data, chain.id);
+
+  // Show the new record and count as soon as the check-in confirms, rather than at the next poll. The result dialog
+  // lives here, not in the form, so it stays open when the record replaces the form.
+  const confirmed = outcome === "success";
+  useEffect(() => {
+    if (!confirmed) return;
+    void refetchRecord();
+    void refetchTotal();
+  }, [confirmed, refetchRecord, refetchTotal]);
+
+  function submit(text: string) {
+    setSubmitted(text);
+    write.mutate(
+      {
+        address: checkInAddress[chain.id],
+        abi: checkInAbi,
+        functionName: "checkIn",
+        args: [text],
+        chainId: chain.id,
+      },
+      { onSuccess: () => setResultOpen(true) },
+    );
+  }
+  // ...
+}
+```
+
+View on GitHub: [`apps/web/src/components/check-in.tsx`](https://github.com/NVNM-Chain/nvnm-demo-dapp/blob/main/apps/web/src/components/check-in.tsx)
+
+When the transaction confirms, the component refetches the reads right away instead of waiting for the next poll.
+
+<Warning title="Leave feeToken unset for browser wallets">
+  The demo dApp leaves `feeToken` unset so MetaMask can sign its transactions. See [Token balances and fees](/developer-guides/token-balances-and-fees#choosing-a-fee-token-and-sponsoring-fees).
+</Warning>
+
+### Track the transaction outcome
+
+wagmi's `waitForTransactionReceipt` never returns a reverted receipt. It replays the call and throws the revert reason. The demo dApp fetches the receipt after a failed wait, so it can tell a revert from an RPC error:
+
+```ts title="apps/web/src/hooks/use-tx-outcome.ts"
+import { BaseError, type Hash } from "viem";
+import { useTransactionReceipt, useWaitForTransactionReceipt } from "wagmi";
+
+import type { SupportedChainId } from "@/config/wagmi";
+
+export type TxOutcome = "pending" | "success" | "reverted" | "unknown";
+
+// What became of a submitted transaction. wagmi's `waitForTransactionReceipt` never returns a reverted receipt: it
+// replays the call and throws the revert reason as a plain `Error`. So a revert surfaces as an error, and the default
+// retries would replay it three more times; only viem's own errors (RPC failures, timeouts) are retried. After a failed
+// wait the receipt itself is fetched, which keeps its status: a revert, or a success the wait lost to an RPC error.
+// Every caller passes the same options, so wagmi shares one query per hash.
+export function useTxOutcome(hash: Hash | undefined, chainId: SupportedChainId): TxOutcome {
+  const wait = useWaitForTransactionReceipt({
+    hash,
+    chainId,
+    query: { retry: (failures, error) => error instanceof BaseError && failures < 3 },
+  });
+  const receipt = useTransactionReceipt({ hash, chainId, query: { enabled: wait.isError } });
+
+  if (wait.isSuccess) return "success";
+  if (!wait.isError) return "pending";
+  if (receipt.data?.status === "success" || receipt.data?.status === "reverted")
+    return receipt.data.status;
+  return receipt.isFetching ? "pending" : "unknown";
+}
+```
+
+View on GitHub: [`apps/web/src/hooks/use-tx-outcome.ts`](https://github.com/NVNM-Chain/nvnm-demo-dapp/blob/main/apps/web/src/hooks/use-tx-outcome.ts)
+
+### Show custom errors
+
+The node reports a bare "execution reverted". viem decodes the custom error name from the revert data because `checkInAbi` declares `AlreadyCheckedIn` and `TextTooLong`. Match on the decoded name to show a clear message:
+
+```ts title="apps/web/src/lib/wallet-errors.ts"
+const known: [matches: (error: ErrorLike) => boolean, message: string][] = [
+  // ...
+  // CheckIn's custom errors. The node reports a bare "execution reverted"; viem names the error once it decodes the
+  // revert data with `checkInAbi`.
+  [
+    (e) => revertedWith(e, "AlreadyCheckedIn"),
+    "This account has already checked in. Each address can check in once.",
+  ],
+  [
+    (e) => revertedWith(e, "TextTooLong"),
+    "The text is longer than the contract allows. Shorten it a little.",
+  ],
+];
+
+// ...
+
+// Whether viem decoded a revert to the custom error `name`, from an ABI that declares it.
+function revertedWith(error: ErrorLike, name: string): boolean {
+  return (
+    error.name === "ContractFunctionRevertedError" &&
+    (error.data as { errorName?: unknown } | undefined)?.errorName === name
+  );
+}
+```
+
+View on GitHub: [`apps/web/src/lib/wallet-errors.ts`](https://github.com/NVNM-Chain/nvnm-demo-dapp/blob/main/apps/web/src/lib/wallet-errors.ts)
+
+For the fee and TIP-20 transfer errors, see [Token balances and fees](/developer-guides/token-balances-and-fees#map-fee-and-transfer-errors).
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Token balances and fees" icon="book" href="/developer-guides/token-balances-and-fees">
+    Read nUSD balances, send TIP-20 transfers, and understand how fees are paid.
+  </Card>
+  <Card title="Build passkey wallets" icon="plug" href="/developer-guides/passkey-wallets">
+    Create P256 passkey accounts and sign Tempo transactions.
+  </Card>
+</CardGroup>
