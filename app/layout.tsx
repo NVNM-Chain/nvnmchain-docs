@@ -9,6 +9,9 @@ export const metadata: Metadata = {
     template: `%s | ${siteConfig.name}`,
   },
   description: siteConfig.description,
+  icons: {
+    icon: { url: '/favicon.svg', type: 'image/svg+xml' },
+  },
 }
 
 export default function RootLayout({
