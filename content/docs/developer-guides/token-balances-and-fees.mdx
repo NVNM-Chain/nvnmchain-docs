@@ -10,7 +10,9 @@ NVNM Chain NEXT is an L1 forked from Tempo. Like Tempo, it has no native gas tok
   Open the [NVNM demo dApp](https://nvnm-chain.github.io/nvnm-demo-dapp/) and use the **Send nUSD** card to see your nUSD balance and send a transfer. The TypeScript samples on this page come from the demo dApp's source ([NVNM-Chain/nvnm-demo-dapp](https://github.com/NVNM-Chain/nvnm-demo-dapp) on GitHub).
 </Tip>
 
-Before you start, add the network to your wallet ([Network details](/resources/network-details)) and get nUSD from the faucet for [Testnet](/getting-started/nusd-faucet-testnet) or [Devnet](/developer-guides/pathusd-faucet-devnet).
+Before you start:
+1. add the network to your wallet ([Network details](/resources/network-details)), or open the [NVNM demo dApp](https://nvnm-chain.github.io/nvnm-demo-dapp/) connect your wallet, you'll be prompted to add the chain
+2. get nUSD from the faucet for [Testnet](/getting-started/nusd-faucet-testnet) or [Devnet](/developer-guides/pathusd-faucet-devnet).
 
 ## There is no native token
 
@@ -45,13 +47,13 @@ curl -s -X POST -H 'content-type: application/json' \
 # {"jsonrpc":"2.0","id":1,"result":"0x9612084f0316e0ebd5182f398e5195a51b5ca47667d4c9b26c9b26c9b26c9b2"}
 ```
 
-Tempo's wallet guide says: "In testnet, `eth_getBalance` returns a large placeholder value for the native token balance to unblock existing assumptions wallets have about the native token balance." Tempo also notes that wallets which check a native balance first may show "an error message like 'Insufficient balance'". The `curl` output above shows that NVNM Chain Testnet returns the same value.
+In testnet, `eth_getBalance` returns a large placeholder value for the native token balance to unblock existing assumptions wallets have about the native token balance. Tempo also notes that wallets which check a native balance first may show "an error message like 'Insufficient balance'". The `curl` output above shows that NVNM Chain Testnet returns the same value.
 
-### What Tempo recommends
+### What we recommends
 
-- **Don't check or show a native balance.** Tempo's recommendation "to wallets and to applications using this method is to remove this balance check, and to not represent any 'native balance' in your user's UI."
-- **Check the fee token balance instead.** "If you use `eth_getBalance` to validate a user's balance, you should instead check the user's account fee token balance on Tempo."
-- **Use `USD` as the currency symbol** when a wallet needs one: "On Tempo, there is no native token, but fees are denominated in USD. So, we recommend using the currency symbol 'USD'."
+- **Don't check or show a native balance.** Our recommendation to applications using this method is to remove this balance check, and to not represent any 'native balance' in your user's UI.
+- **Check the fee token balance instead.** If you use `eth_getBalance` to validate a user's balance, you should instead check the user's account fee token balance on NVNM Chain.
+- **Use `USD` as the currency symbol** when a wallet needs one we recommend using the currency symbol 'USD'.
 
 Inside the EVM, native balances are always zero:
 
