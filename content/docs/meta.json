@@ -10,6 +10,7 @@
     "developer-guides/how-to-connect-wallets-to-devnet",
     "developer-guides/pathusd-faucet-devnet",
     "developer-guides/token-balances-and-fees",
+    "developer-guides/passkey-wallets",
     "---Custom Modules---",
     "modules/anchoring-module",
     "---Reference---",
