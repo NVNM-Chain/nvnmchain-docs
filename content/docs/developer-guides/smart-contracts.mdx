@@ -18,15 +18,15 @@ Tempo describes its EVM compatibility like this:
 
 The differences that matter for contract code and deployments:
 
-| Area | Tempo behavior | Source |
-| --- | --- | --- |
-| `BALANCE` and `SELFBALANCE` | Always return 0. Use TIP-20 `balanceOf` instead. | [EVM compatibility](https://tempo.xyz/developers/docs/quickstart/evm-compatibility) |
-| `CALLVALUE` (`msg.value`) | Always returns 0. There is no alternative. | [EVM compatibility](https://tempo.xyz/developers/docs/quickstart/evm-compatibility) |
-| New storage slot (`SSTORE` 0 to non-zero) | 250,000 gas (Ethereum: 20,000) | [EVM compatibility](https://tempo.xyz/developers/docs/quickstart/evm-compatibility) |
-| Account creation | 250,000 gas (Ethereum: 0) | [EVM compatibility](https://tempo.xyz/developers/docs/quickstart/evm-compatibility) |
-| Contract creation | `(code_size × 1,000) + 500,000` gas, for both `CREATE` and `CREATE2` | [TIP-1000](https://tempo.xyz/developers/docs/protocol/tips/tip-1000) |
-| First transaction from an account (nonce 0) | Must supply at least 271,000 gas | [TIP-1000](https://tempo.xyz/developers/docs/protocol/tips/tip-1000) |
-| Transaction gas cap | 30M gas, to fit 24 KB contract deployments | [TIP-1000](https://tempo.xyz/developers/docs/protocol/tips/tip-1000) |
+| Area                                        | Tempo behavior                                                       | Source                                                                              |
+|---------------------------------------------|----------------------------------------------------------------------|-------------------------------------------------------------------------------------|
+| `BALANCE` and `SELFBALANCE`                 | Always return 0. Use TIP-20 `balanceOf` instead.                     | [EVM compatibility](https://tempo.xyz/developers/docs/quickstart/evm-compatibility) |
+| `CALLVALUE` (`msg.value`)                   | Always returns 0. There is no alternative.                           | [EVM compatibility](https://tempo.xyz/developers/docs/quickstart/evm-compatibility) |
+| New storage slot (`SSTORE` 0 to non-zero)   | 250,000 gas (Ethereum: 20,000)                                       | [EVM compatibility](https://tempo.xyz/developers/docs/quickstart/evm-compatibility) |
+| Account creation                            | 250,000 gas (Ethereum: 0)                                            | [EVM compatibility](https://tempo.xyz/developers/docs/quickstart/evm-compatibility) |
+| Contract creation                           | `(code_size × 1,000) + 500,000` gas, for both `CREATE` and `CREATE2` | [TIP-1000](https://tempo.xyz/developers/docs/protocol/tips/tip-1000)                |
+| First transaction from an account (nonce 0) | Must supply at least 271,000 gas                                     | [TIP-1000](https://tempo.xyz/developers/docs/protocol/tips/tip-1000)                |
+| Transaction gas cap                         | 30M gas, to fit 24 KB contract deployments                           | [TIP-1000](https://tempo.xyz/developers/docs/protocol/tips/tip-1000)                |
 
 Tempo sums up the impact: "contract deployments cost 5-10x more than on Ethereum. Update your `gas_limit` estimates accordingly." Tempo also notes that transactions above 16,000,000 gas are not recommended. The 30M cap exists only for maximum-size deployments ([TIP-1010](https://tempo.xyz/developers/docs/protocol/tips/tip-1010)).
 
@@ -34,11 +34,11 @@ Because there is no native token, the demo dApp's contract guidelines say: don't
 
 ### Which token pays for contract calls
 
-Tempo picks each transaction's fee token from a preference order. It checks the transaction's `fee_token`, then the fee payer's account preference, then rules for certain TIP-20 and Stablecoin DEX calls, and falls back to pathUSD. See [Which token pays the fee](/developer-guides/token-balances-and-fees#which-token-pays-the-fee) for the full order.
+Tempo picks each transaction's fee token from a preference order. It checks the transaction's `fee_token`, then the fee payer's account preference, then rules for certain TIP-20 and Stablecoin DEX calls, and falls back to nUSD. See [Which token pays the fee](/developer-guides/token-balances-and-fees#which-token-pays-the-fee) for the full order.
 
 For contracts like `CheckIn`, Tempo's [EVM compatibility](https://tempo.xyz/developers/docs/quickstart/evm-compatibility) page says:
 
-> If the user is calling a contract that is not a TIP-20 token, the EVM transaction will default to the pathUSD token.
+> If the user is calling a contract that is not a TIP-20 token, the EVM transaction will default to the nUSD token.
 
 On NVNM Chain, that fallback token is **nUSD**, so your deployer and your users need a nUSD balance to send contract transactions. See [How fees work](/developer-guides/token-balances-and-fees#how-fees-work) for its address.
 

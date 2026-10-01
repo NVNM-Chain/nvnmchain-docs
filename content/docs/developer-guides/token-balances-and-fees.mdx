@@ -55,10 +55,10 @@ Tempo's wallet guide says: "In testnet, `eth_getBalance` returns a large placeho
 
 Inside the EVM, native balances are always zero:
 
-| Feature | Behavior on Tempo | Alternative |
-| --- | --- | --- |
-| `BALANCE` and `SELFBALANCE` | Always returns 0 | Use TIP-20 `balanceOf` instead |
-| `CALLVALUE` | Always returns 0 | There is no alternative |
+| Feature                     | Behavior on Tempo | Alternative                    |
+|-----------------------------|-------------------|--------------------------------|
+| `BALANCE` and `SELFBALANCE` | Always returns 0  | Use TIP-20 `balanceOf` instead |
+| `CALLVALUE`                 | Always returns 0  | There is no alternative        |
 
 Learn more in the Tempo docs: [EVM differences](https://tempo.xyz/developers/docs/quickstart/evm-compatibility#handling-eth-native-token-balance-checks) and [wallet developer guide](https://tempo.xyz/developers/docs/quickstart/wallet-developers).
 
@@ -164,11 +164,11 @@ Learn more in the Tempo docs: [Fees](https://tempo.xyz/developers/docs/protocol/
 
 Tempo offers these options for fee setup:
 
-| Goal | Tempo approach |
-| --- | --- |
-| Choose the fee token for one transaction | Pass `feeToken` |
+| Goal                                          | Tempo approach                        |
+|-----------------------------------------------|---------------------------------------|
+| Choose the fee token for one transaction      | Pass `feeToken`                       |
 | Set an account's persistent default fee token | Call `setUserToken` on the FeeManager |
-| Have another account pay the fee | Pass the account as `feePayer` |
+| Have another account pay the fee              | Pass the account as `feePayer`        |
 
 Fee sponsorship uses the `fee_payer_signature` field of Tempo Transactions. Per Tempo, the sender signs "over a blank fee token field", which delegates the fee token choice to the fee payer. "If no `fee_payer_signature` is provided, then the `fee_payer` of the transaction is its sender." The fee token "cannot be set from Solidity — it is a transaction-level parameter handled by the signing SDK."
 
@@ -184,11 +184,11 @@ Per Tempo, "TIP-20 tokens are a suite of precompiles that provide a built-in opt
 
 You need these functions to show balances and send tokens:
 
-| Function | Notes |
-| --- | --- |
-| `balanceOf(address account) returns (uint256)` | The account's balance in base units |
-| `decimals() returns (uint8)` | Always returns `6` for TIP-20 tokens |
-| `transfer(address to, uint256 amount) returns (bool)` | Same as ERC-20 |
+| Function                                                     | Notes                                                                   |
+|--------------------------------------------------------------|-------------------------------------------------------------------------|
+| `balanceOf(address account) returns (uint256)`               | The account's balance in base units                                     |
+| `decimals() returns (uint8)`                                 | Always returns `6` for TIP-20 tokens                                    |
+| `transfer(address to, uint256 amount) returns (bool)`        | Same as ERC-20                                                          |
 | `transferWithMemo(address to, uint256 amount, bytes32 memo)` | Like `transfer`, plus a fixed 32-byte memo emitted in a dedicated event |
 
 <Note>

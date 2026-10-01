@@ -30,12 +30,12 @@ The demo dApp describes its passkey account the same way: "a chain-native WebAut
 
 "Four signature schemes are supported. The signature type is determined by length and type identifier" ([specification](https://tempo.xyz/developers/docs/protocol/transactions/spec-tempo-transaction)). The spec also notes: "Different signature types incur different base transaction costs to reflect their computational complexity." The last column shows that base transaction cost, not the cost of the signature check alone. The secp256k1 base of 21,000 "Includes 3,000 gas for ecrecover precompile", and P256 adds "additional 5k for P256 verification":
 
-| Type | Wire format | How Tempo verifies it | Base transaction gas |
-| --- | --- | --- | --- |
-| secp256k1 | 65 bytes, no type prefix (backward compatible) | Standard `ecrecover` | 21,000 |
-| P256 | Prefix `0x01` + 129 bytes (`r`, `s`, `pub_key_x`, `pub_key_y`, `pre_hash`). 130 bytes total. | P256 curve verification with the provided public key. If `pre_hash` is `true`, the digest is `sha256(digest)` first. | 26,000 |
-| WebAuthn | Prefix `0x02` + `webauthn_data` (`authenticatorData` ‖ `clientDataJSON`) + 128 bytes (`r`, `s`, `pub_key_x`, `pub_key_y`). 129 to 2049 bytes. | Parse `clientDataJSON`, verify challenge and type, then P256 verify | 26,000 + calldata gas for `clientDataJSON` |
-| Keychain | Prefix `0x03` + `user_address` (20 bytes) + inner signature | Verify the inner signature, then validate the access key in the AccountKeychain precompile | Inner signature + 3,000 |
+| Type      | Wire format                                                                                                                                   | How Tempo verifies it                                                                                                | Base transaction gas                       |
+|-----------|-----------------------------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------|--------------------------------------------|
+| secp256k1 | 65 bytes, no type prefix (backward compatible)                                                                                                | Standard `ecrecover`                                                                                                 | 21,000                                     |
+| P256      | Prefix `0x01` + 129 bytes (`r`, `s`, `pub_key_x`, `pub_key_y`, `pre_hash`). 130 bytes total.                                                  | P256 curve verification with the provided public key. If `pre_hash` is `true`, the digest is `sha256(digest)` first. | 26,000                                     |
+| WebAuthn  | Prefix `0x02` + `webauthn_data` (`authenticatorData` ‖ `clientDataJSON`) + 128 bytes (`r`, `s`, `pub_key_x`, `pub_key_y`). 129 to 2049 bytes. | Parse `clientDataJSON`, verify challenge and type, then P256 verify                                                  | 26,000 + calldata gas for `clientDataJSON` |
+| Keychain  | Prefix `0x03` + `user_address` (20 bytes) + inner signature                                                                                   | Verify the inner signature, then validate the access key in the AccountKeychain precompile                           | Inner signature + 3,000                    |
 
 A passkey produces a WebAuthn signature. Tempo's WebAuthn struct looks like this:
 
@@ -82,13 +82,13 @@ Two consequences follow for your app:
 
 Tempo's [WebAuthn verification](https://tempo.xyz/developers/docs/protocol/transactions/spec-tempo-transaction) "follows the [Daimo P256 verifier approach](https://github.com/daimo-eth/p256-verifier/blob/master/src/WebAuthn.sol)". The challenge is the transaction hash, Base64URL-encoded, and the signed message is `sha256(authenticatorData || sha256(clientDataJSON))`.
 
-| Tempo verifies | Tempo skips |
-| --- | --- |
-| Authenticator data minimum length (37 bytes) | Origin verification (not applicable to blockchain) |
-| User Presence (UP) flag is set | RP ID hash validation (no central RP in decentralized context) |
-| `"type":"webauthn.get"` in `clientDataJSON` | Signature counter (anti-cloning left to application layer) |
-| Challenge matches `tx_hash` (Base64URL encoded) | Backup flags (account policy decision) |
-| P256 signature validity | |
+| Tempo verifies                                  | Tempo skips                                                    |
+|-------------------------------------------------|----------------------------------------------------------------|
+| Authenticator data minimum length (37 bytes)    | Origin verification (not applicable to blockchain)             |
+| User Presence (UP) flag is set                  | RP ID hash validation (no central RP in decentralized context) |
+| `"type":"webauthn.get"` in `clientDataJSON`     | Signature counter (anti-cloning left to application layer)     |
+| Challenge matches `tx_hash` (Base64URL encoded) | Backup flags (account policy decision)                         |
+| P256 signature validity                         |                                                                |
 
 Because the chain skips origin and RP ID checks, the chain does not bind a passkey to your domain. The browser does. Keep this in mind when you read the [security notes](#security-and-operational-notes).
 
@@ -108,11 +108,11 @@ Tempo's answer is access keys. The same page introduces "the Root Key being able
 
 The demo dApp builds its passkey wallet on three TypeScript packages that carry Tempo support. Tempo's [TypeScript SDK page](https://tempo.xyz/developers/docs/sdk/typescript) links to the viem and wagmi integrations:
 
-| Package | Role | Version in the demo dApp |
-| --- | --- | --- |
+| Package                 | Role                                                                                                                    | Version in the demo dApp           |
+|-------------------------|-------------------------------------------------------------------------------------------------------------------------|------------------------------------|
 | `wagmi` (`wagmi/tempo`) | The `webAuthn` connector, "Connector for a WebAuthn EOA" ([wagmi.sh/tempo](https://wagmi.sh/tempo/connectors/webAuthn)) | `wagmi` 3.7.7, `@wagmi/core` 3.6.5 |
-| `accounts` | The Tempo Accounts SDK. "`webAuthn` is a thin wagmi wrapper around the root `accounts` package." | 0.18.4 |
-| `viem` (`viem/tempo`) | Tempo chain config, `Account.fromWebAuthnP256` and the Tempo transaction serializers | `^2.57.1` (2.57.1 resolved) |
+| `accounts`              | The Tempo Accounts SDK. "`webAuthn` is a thin wagmi wrapper around the root `accounts` package."                        | 0.18.4                             |
+| `viem` (`viem/tempo`)   | Tempo chain config, `Account.fromWebAuthnP256` and the Tempo transaction serializers                                    | `^2.57.1` (2.57.1 resolved)        |
 
 The demo dApp's passkey ceremony also uses `ox` 0.14.45 and `webauthx` 0.1.2, the versions `accounts` 0.18.4 resolves. Its `pnpm-workspace.yaml` pins `wagmi`, `@wagmi/core`, `accounts`, `ox` and `webauthx` to exact versions (viem is `^2.57.1`), so re-test before you bump them.
 
