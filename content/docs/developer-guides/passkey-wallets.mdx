@@ -1,18 +1,18 @@
 ---
 title: "Build passkey wallets"
-description: "Create NVNM Chain accounts from passkeys, store and restore them, and sign transactions with Face ID, Touch ID or a security key, using Tempo's native WebAuthn/P256 support."
+description: "Create NVNM Chain accounts from passkeys, store and restore them, and sign transactions with Face ID, Touch ID, a security key or supported password managers, using Tempo's native WebAuthn/P256 (aka secp256r1) support."
 icon: "fingerprint"
 ---
 
 NVNM Chain NEXT is an L1 forked from Tempo. Tempo verifies passkey (WebAuthn/P256) signatures in the protocol itself, so you can turn a passkey into an account without a smart-contract wallet, bundler or seed phrase.
 
-This guide explains how Tempo supports passkeys. It then walks through the passkey wallet in the NVNM demo dApp. You learn how to create an account, store its public key, restore it in a new browser and sign transactions.
+This guide explains how NVNM Chain supports passkeys. It then walks through the passkey wallet in the NVNM demo dApp. You learn how to create an account, store its public key, restore it in a new browser and sign transactions.
 
 <Tip title="Live demo and source">
   The live [NVNM demo dApp](https://nvnm-chain.github.io/nvnm-demo-dapp/) runs the passkey wallet this page describes. The dApp code samples on this page come from the demo dApp's source ([NVNM-Chain/nvnm-demo-dapp](https://github.com/NVNM-Chain/nvnm-demo-dapp) on GitHub). File paths such as `apps/web/src/config/chains.ts` are relative to that repository. For a click-through, see [Try it in the demo dApp](#try-it-in-the-demo-dapp).
 </Tip>
 
-## How passkeys work on Tempo
+## How passkeys work the chain
 
 Tempo's docs explain why passkeys need protocol support:
 
@@ -80,7 +80,7 @@ Two consequences follow for your app:
 
 ### What the chain checks, and what it skips
 
-Tempo's [WebAuthn verification](https://tempo.xyz/developers/docs/protocol/transactions/spec-tempo-transaction) "follows the [Daimo P256 verifier approach](https://github.com/daimo-eth/p256-verifier/blob/master/src/WebAuthn.sol)". The challenge is the transaction hash, Base64URL-encoded, and the signed message is `sha256(authenticatorData || sha256(clientDataJSON))`.
+Tempo's [WebAuthn verification](https://tempo.xyz/developers/docs/protocol/transactions/spec-tempo-transaction) follows the [Daimo P256 verifier approach](https://github.com/daimo-eth/p256-verifier/blob/master/src/WebAuthn.sol). The challenge is the transaction hash, Base64URL-encoded, and the signed message is `sha256(authenticatorData || sha256(clientDataJSON))`.
 
 | Tempo verifies                                  | Tempo skips                                                    |
 |-------------------------------------------------|----------------------------------------------------------------|
@@ -104,7 +104,7 @@ Tempo's answer is access keys. The same page introduces "the Root Key being able
   The demo dApp keeps access keys off. Every transaction asks for the passkey, and its UI warns users that "your device's prompt may say 'Sign in'". To add access keys, see Tempo's [Access Keys guide](https://viem.sh/tempo/guides/access-keys).
 </Note>
 
-## The Tempo SDKs you use
+## The SDKs to use
 
 The demo dApp builds its passkey wallet on three TypeScript packages that carry Tempo support. Tempo's [TypeScript SDK page](https://tempo.xyz/developers/docs/sdk/typescript) links to the viem and wagmi integrations:
 
@@ -433,7 +433,7 @@ With `key: "nvnm-demo-dapp"`, the dApp's data lives under these keys:
 The SDK also persists its provider state, such as the connected accounts, through the same storage adapter.
 
 <Warning>
-  The app never stores a private key. The authenticator holds it, and Tempo notes that it "is not exported through the WebAuthn API". The dApp stores only public keys and account metadata. Its UI says: "This site never sees its private key."
+  The app never stores a private key. The authenticator holds it. The dApp stores only public keys and account metadata. Its UI says: "This site never sees its private key."
 </Warning>
 
 The key names come from the internals of `accounts` 0.18.4, which the dApp relies on. Tempo doesn't document them, so check them again when you upgrade the SDK.
@@ -643,7 +643,13 @@ The dApp uses nUSD, the TIP-20 at `0x20C0000000000000000000000000000000000000`, 
   </Step>
 
   <Step title="Sign in again">
-    Disconnect, then click **Sign in with a passkey**. Open **How do passkey accounts work?** in the same view for a summary of how passkey accounts behave.
+    Disconnect, then click **Sign in with a passkey**. Your browser or password manager asks you to confirm with your passkey. Open **How do passkey accounts work?** in the same view for a summary of how passkey accounts behave.
+
+    <Frame>
+
+    ![The demo dApp's passkey view during sign-in. The 1Password browser extension asks for Touch ID or a password to use a passkey, while the dApp shows "Confirm with your passkey…"](/images/developer-guides/passkey-sign-in.png)
+
+    </Frame>
   </Step>
 </Steps>
 
