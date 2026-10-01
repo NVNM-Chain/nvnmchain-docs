@@ -8,7 +8,7 @@ interface PreProps extends React.HTMLAttributes<HTMLPreElement> {
   'data-language'?: string
 }
 
-export function Pre({ children, className, 'data-language': language, ...props }: PreProps) {
+export function Pre({ children, className, title, 'data-language': language, ...props }: PreProps) {
   const [copied, setCopied] = useState(false)
   const preRef = useRef<HTMLPreElement>(null)
 
@@ -25,6 +25,13 @@ export function Pre({ children, className, 'data-language': language, ...props }
     <div className="group relative my-6">
       {/* Container with border and rounded corners */}
       <div className="relative rounded-lg border border-border bg-muted/30 dark:bg-[#0d0d0f] overflow-hidden">
+        {/* File name from the code fence's title="..." meta */}
+        {title && (
+          <div className="px-4 py-2 border-b border-border bg-[#f3f4f6] dark:bg-[#1f2937] text-xs font-mono text-muted-foreground">
+            {title}
+          </div>
+        )}
+
         {/* Code content */}
         <pre
           ref={preRef}
@@ -41,7 +48,8 @@ export function Pre({ children, className, 'data-language': language, ...props }
         <button
           onClick={handleCopy}
           className={cn(
-            'absolute top-2 right-2 flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium transition-all',
+            'absolute right-2 flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium transition-all',
+            title ? 'top-1' : 'top-2',
             'text-muted-foreground hover:text-foreground',
             'bg-background/80 hover:bg-background border border-border/50',
             'opacity-0 group-hover:opacity-100',
