@@ -11,8 +11,9 @@ NVNM Chain NEXT is an L1 forked from Tempo. Like Tempo, it has no native gas tok
 </Tip>
 
 Before you start:
-1. add the network to your wallet ([Network details](/resources/network-details)), or open the [NVNM demo dApp](https://nvnm-chain.github.io/nvnm-demo-dapp/) connect your wallet, you'll be prompted to add the chain
-2. get nUSD from the faucet for [Testnet](/getting-started/nusd-faucet-testnet) or [Devnet](/developer-guides/pathusd-faucet-devnet).
+
+1. Add the network to your wallet. Enter the values from [Network details](/resources/network-details), or open the [NVNM demo dApp](https://nvnm-chain.github.io/nvnm-demo-dapp/) and connect your wallet. The dApp prompts your wallet to add the chain.
+2. Get nUSD from the faucet for [Testnet](/getting-started/nusd-faucet-testnet) or [Devnet](/developer-guides/pathusd-faucet-devnet).
 
 ## There is no native token
 
@@ -49,11 +50,11 @@ curl -s -X POST -H 'content-type: application/json' \
 
 In testnet, `eth_getBalance` returns a large placeholder value for the native token balance to unblock existing assumptions wallets have about the native token balance. Tempo also notes that wallets which check a native balance first may show "an error message like 'Insufficient balance'". The `curl` output above shows that NVNM Chain Testnet returns the same value.
 
-### What we recommends
+### What we recommend
 
-- **Don't check or show a native balance.** Our recommendation to applications using this method is to remove this balance check, and to not represent any 'native balance' in your user's UI.
+- **Don't check or show a native balance.** If your app checks `eth_getBalance`, remove that check. Don't show any "native balance" in your UI.
 - **Check the fee token balance instead.** If you use `eth_getBalance` to validate a user's balance, you should instead check the user's account fee token balance on NVNM Chain.
-- **Use `USD` as the currency symbol** when a wallet needs one we recommend using the currency symbol 'USD'.
+- **Use `USD` as the currency symbol** when a wallet needs one.
 
 Inside the EVM, native balances are always zero:
 

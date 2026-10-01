@@ -38,7 +38,7 @@ Tempo picks each transaction's fee token from a preference order. It checks the 
 
 For contracts like `CheckIn`, Tempo's [EVM compatibility](https://tempo.xyz/developers/docs/quickstart/evm-compatibility) page says:
 
-> If the user is calling a contract that is not a TIP-20 token, the EVM transaction will default to the nUSD token.
+> If the user is calling a contract that is not a TIP-20 token, the EVM transaction will default to the pathUSD token.
 
 On NVNM Chain, that fallback token is **nUSD**, so your deployer and your users need a nUSD balance to send contract transactions. See [How fees work](/developer-guides/token-balances-and-fees#how-fees-work) for its address.
 
