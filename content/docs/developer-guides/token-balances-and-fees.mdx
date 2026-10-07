@@ -241,7 +241,7 @@ The demo dApp never reads `eth_getBalance`. It reads nUSD's `balanceOf` and form
     import type { SupportedChainId } from "@/config/wagmi";
     import { tip20Abi } from "@/lib/tip20";
 
-    // The account's spendable nUSD, in base units. `eth_getBalance` is a placeholder on Tempo; the balance that pays for
+    // The account's spendable nUSD, in base units. `eth_getBalance` is a placeholder on NVNM Chain; the balance that pays for
     // transfers and fees is the TIP-20 fee token's. Every caller passes the same query options, so wagmi runs one query
     // per account and chain however many components show the balance. Render the result with `<NusdAmount>`.
     export function useNusdBalance(account: Address, chainId: SupportedChainId) {

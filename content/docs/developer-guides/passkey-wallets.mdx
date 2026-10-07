@@ -141,7 +141,7 @@ The steps below follow the demo dApp's web app in `apps/web`. It is a React app 
 
     // ...
 
-    // Passkey (Tempo) accounts need Tempo's chain config: the formatters, serializers and prepare hook for its native
+    // Passkey accounts need Tempo's chain config: the formatters, serializers and prepare hook for its native
     // transaction type (0x76), plus the signature-envelope `verifyHash`. Their requests carry Tempo `calls`, which
     // viem's default formatter drops. viem doesn't export the config on its own, so take exactly these keys off a
     // Tempo chain (the whole chain would bring Tempo's contracts and hardfork). Tempo's `blockTime` (1 s) puts viem's
