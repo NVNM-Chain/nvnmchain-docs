@@ -110,7 +110,7 @@ The demo dApp builds its passkey wallet on three TypeScript packages that suppor
 
 | Package                 | Role                                                                                                                    | Version in the demo dApp           |
 |-------------------------|-------------------------------------------------------------------------------------------------------------------------|------------------------------------|
-| `wagmi` (`wagmi/tempo`) | The `webAuthn` connector, "Connector for a WebAuthn EOA" ([wagmi.sh/tempo](https://wagmi.sh/tempo/connectors/webAuthn)) | `wagmi` 3.7.7, `@wagmi/core` 3.6.5 |
+| `wagmi` (`wagmi/tempo`) | The `webAuthn` connector, "Connector for a WebAuthn EOA" ([wagmi docs](https://wagmi.sh/tempo/connectors/webAuthn)) | `wagmi` 3.7.7, `@wagmi/core` 3.6.5 |
 | `accounts`              | The Accounts SDK. "`webAuthn` is a thin wagmi wrapper around the root `accounts` package."                              | 0.18.4                             |
 | `viem` (`viem/tempo`)   | Chain config, `Account.fromWebAuthnP256` and the native transaction serializers                                         | `^2.57.1` (2.57.1 resolved)        |
 
@@ -118,7 +118,7 @@ The demo dApp's passkey ceremony also uses `ox` 0.14.45 and `webauthx` 0.1.2, th
 
 The minimal setup registers the connector in a wagmi config:
 
-```ts title="wagmi.config.ts (from wagmi.sh/tempo)"
+```ts title="wagmi.config.ts (from the wagmi docs)"
 import { createConfig, http } from 'wagmi'
 import { tempo } from 'wagmi/chains'
 import { webAuthn } from 'wagmi/tempo'
@@ -133,7 +133,7 @@ export const config = createConfig({
 })
 ```
 
-Source: [wagmi.sh/tempo](https://wagmi.sh/tempo/connectors/webAuthn).
+Source: [wagmi webAuthn connector](https://wagmi.sh/tempo/connectors/webAuthn).
 
 By default the connector runs the passkey ceremony in the browser. The connector docs say: "Use `webAuthn({ authUrl: '/api/webauthn' })` if you want registration and authentication challenges to come from a server endpoint instead of the default local browser ceremony." To plug in your own ceremony, pass `ceremony`. The demo dApp does this.
 
@@ -574,7 +574,7 @@ Here is what this means for your users:
 
 The SDK's source describes `WebAuthnCeremony.local` as "a pure client-side ceremony for development and prototyping". For production, the Accounts SDK documents a server-backed ceremony. Mount `Handler.webAuthn` from `accounts/server`. Then point the connector at it with `webAuthn({ authUrl: '/auth' })`:
 
-```ts title="Server (from accounts.tempo.xyz)"
+```ts title="Server (from the Accounts SDK docs)"
 import { Handler, Kv } from 'accounts/server'
 
 export const handler = Handler.webAuthn({
