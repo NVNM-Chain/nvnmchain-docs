@@ -4,49 +4,43 @@ description: "Deploy Solidity contracts to NVNM Chain with Foundry, then read an
 icon: "code"
 ---
 
-NVNM Chain NEXT runs Tempo EVM. You write, deploy, and call contracts with the same tools you use on Ethereum. This guide walks you through the demo dApp's `CheckIn` contract. You deploy it with Foundry, then read and write it from a React app.
+NVNM Chain NEXT is EVM compatible. You write, deploy, and call contracts with the same tools you use on Ethereum. This guide walks you through the demo dApp's `CheckIn` contract. You deploy it with Foundry, then read and write it from a React app.
 
 <Tip title="Try the demo dApp">
   Open the live [NVNM demo dApp](https://nvnm-chain.github.io/nvnm-demo-dapp/) and use its **Check in** card. The code samples on this page come from the demo dApp's source ([NVNM-Chain/nvnm-demo-dapp](https://github.com/NVNM-Chain/nvnm-demo-dapp) on GitHub). A sample taken from the dApp shows its file path in the header above the code.
 </Tip>
 
-## How Tempo EVM differs from Ethereum
+## How the NVNM Chain EVM differs from Ethereum
 
-Tempo describes its EVM compatibility like this:
-
-> Tempo is fully compatible with the Ethereum Virtual Machine (EVM), targeting the **Osaka** EVM hard fork. Developers can deploy and interact with smart contracts using the same tools, languages, and frameworks they use on Ethereum, such as Solidity, Foundry, and Hardhat. All Ethereum JSON-RPC methods work out of the box.
+NVNM Chain's EVM is configured for the **Osaka** hard fork. Nodes answer every standard Ethereum JSON-RPC method, so your Solidity projects and toolchains like Foundry or Hardhat connect to them directly.
 
 The differences that matter for contract code and deployments:
 
-| Area                                        | Tempo behavior                                                       | Source                                                                              |
-|---------------------------------------------|----------------------------------------------------------------------|-------------------------------------------------------------------------------------|
-| `BALANCE` and `SELFBALANCE`                 | Always return 0. Use TIP-20 `balanceOf` instead.                     | [EVM compatibility](https://tempo.xyz/developers/docs/quickstart/evm-compatibility) |
-| `CALLVALUE` (`msg.value`)                   | Always returns 0. There is no alternative.                           | [EVM compatibility](https://tempo.xyz/developers/docs/quickstart/evm-compatibility) |
-| New storage slot (`SSTORE` 0 to non-zero)   | 250,000 gas (Ethereum: 20,000)                                       | [EVM compatibility](https://tempo.xyz/developers/docs/quickstart/evm-compatibility) |
-| Account creation                            | 250,000 gas (Ethereum: 0)                                            | [EVM compatibility](https://tempo.xyz/developers/docs/quickstart/evm-compatibility) |
-| Contract creation                           | `(code_size × 1,000) + 500,000` gas, for both `CREATE` and `CREATE2` | [TIP-1000](https://tempo.xyz/developers/docs/protocol/tips/tip-1000)                |
-| First transaction from an account (nonce 0) | Must supply at least 271,000 gas                                     | [TIP-1000](https://tempo.xyz/developers/docs/protocol/tips/tip-1000)                |
-| Transaction gas cap                         | 30M gas, to fit 24 KB contract deployments                           | [TIP-1000](https://tempo.xyz/developers/docs/protocol/tips/tip-1000)                |
+| Area                                        | NVNM Chain behavior                                                  |
+|---------------------------------------------|----------------------------------------------------------------------|
+| `BALANCE` and `SELFBALANCE`                 | Always return 0. Use TIP-20 `balanceOf` instead.                     |
+| `CALLVALUE` (`msg.value`)                   | Always returns 0. There is no alternative.                           |
+| New storage slot (`SSTORE` 0 to non-zero)   | 250,000 gas (Ethereum: 20,000)                                       |
+| Account creation                            | 250,000 gas (Ethereum: 0)                                            |
+| Contract creation                           | `(code_size × 1,000) + 500,000` gas, for both `CREATE` and `CREATE2` |
+| First transaction from an account (nonce 0) | Must supply at least 271,000 gas                                     |
+| Transaction gas cap                         | 30M gas, to fit 24 KB contract deployments                           |
 
-Tempo sums up the impact: "contract deployments cost 5-10x more than on Ethereum. Update your `gas_limit` estimates accordingly." Tempo also notes that transactions above 16,000,000 gas are not recommended. The 30M cap exists only for maximum-size deployments ([TIP-1010](https://tempo.xyz/developers/docs/protocol/tips/tip-1010)).
+Together, these prices make a contract deployment on NVNM Chain about 5 to 10 times as expensive in gas as on Ethereum. Budget a higher `gas_limit` for deployments. Where you can, stay at or below 16,000,000 gas per transaction. Only maximum-size deployments need the 30M cap.
 
-Because there is no native token, the demo dApp's contract guidelines say: don't design around `msg.value`, `payable` ETH transfers, or `address.balance`. Value moves in TIP-20 stablecoins, which are ERC-20 compatible and use **6 decimals** (from `packages/contracts/CLAUDE.md`).
+Because NVNM Chain has no native gas token, the demo dApp's contract guidelines say: don't design around `msg.value`, `payable` ETH transfers, or `address.balance`. Value moves in TIP-20 stablecoins, which are ERC-20 compatible and use **6 decimals** (from `packages/contracts/CLAUDE.md`).
 
 ### Which token pays for contract calls
 
-Tempo picks each transaction's fee token from a preference order. It checks the transaction's `fee_token`, then the fee payer's account preference, then rules for certain TIP-20 and Stablecoin DEX calls, and falls back to nUSD. See [Which token pays the fee](/developer-guides/token-balances-and-fees#which-token-pays-the-fee) for the full order.
+NVNM Chain picks each transaction's fee token from a preference order. It checks the transaction's `fee_token`, then the fee payer's account preference, then rules for certain TIP-20 and Stablecoin DEX calls, and falls back to nUSD. See [Which token pays the fee](/developer-guides/token-balances-and-fees#which-token-pays-the-fee) for the full order.
 
-For contracts like `CheckIn`, Tempo's [EVM compatibility](https://tempo.xyz/developers/docs/quickstart/evm-compatibility) page says:
-
-> If the user is calling a contract that is not a TIP-20 token, the EVM transaction will default to the pathUSD token.
-
-On NVNM Chain, that fallback token is **nUSD**, so your deployer and your users need a nUSD balance to send contract transactions. See [How fees work](/developer-guides/token-balances-and-fees#how-fees-work) for its address.
+Your own contracts, such as `CheckIn`, aren't TIP-20 tokens. A plain EVM transaction that calls one pays its fee in the fallback token, unless the transaction sets `fee_token` or the fee payer has set an account fee token with `setUserToken`. On NVNM Chain, the fallback token is **nUSD** at `0x20C0000000000000000000000000000000000000`. Your deployer and your users need an nUSD balance to send contract transactions. See [How fees work](/developer-guides/token-balances-and-fees#how-fees-work) for details.
 
 ## Deploy a contract with Foundry
 
 ### Install Foundry
 
-Tempo is a first-class network in upstream Foundry. Install or update it with `foundryup`:
+You don't need a custom Foundry build. Upstream Foundry supports the chain's features. Install or update it with `foundryup`:
 
 ```bash
 curl -L https://foundry.paradigm.xyz | bash
@@ -54,21 +48,21 @@ foundryup
 ```
 
 <Warning>
-  Tempo's docs state: "`tempo-foundry` and `foundryup -n tempo` are deprecated. Switch to the latest upstream Foundry release with `foundryup`." Some older guides, including a note in the demo dApp's `packages/contracts/CLAUDE.md`, still mention `tempo-foundry`.
+  Don't install the `tempo-foundry` build or run `foundryup -n tempo`. Both are deprecated. Run plain `foundryup` to get the latest standard Foundry release. Some older guides still mention `tempo-foundry`, including a note in the demo dApp's `packages/contracts/CLAUDE.md`.
 </Warning>
 
-To use Tempo-specific features in an existing project, Tempo recommends installing [`tempo-std`](https://github.com/tempoxyz/tempo-std) and setting `tempo = true` in `foundry.toml`:
+To use the chain-specific features in an existing project, install [`tempo-std`](https://github.com/tempoxyz/tempo-std) and set `tempo = true` in `foundry.toml`:
 
 ```bash
 forge install tempoxyz/tempo-std
 ```
 
-```toml title="foundry.toml (from Tempo docs)"
+```toml title="foundry.toml"
 [profile.default]
 tempo = true
 ```
 
-Tempo says this flag "enables Tempo-specific network behavior while still letting Foundry resolve the right semantics from the chain you are targeting." The demo dApp's `CheckIn` project doesn't set it. Learn more in the [Tempo Foundry docs](https://tempo.xyz/developers/docs/sdk/foundry).
+Setting `tempo = true` tells Foundry to apply the chain's own rules. Foundry still checks the chain you connect to before it decides which behavior applies. The demo dApp's `CheckIn` project doesn't set the flag.
 
 ### Configure the project
 
@@ -151,9 +145,9 @@ contract CheckIn {
 
 View on GitHub: [`packages/contracts/src/CheckIn.sol`](https://github.com/NVNM-Chain/nvnm-demo-dapp/blob/main/packages/contracts/src/CheckIn.sol)
 
-The contract is plain Solidity. It uses no `payable` functions and no native balances, so it needs no changes for Tempo EVM.
+The contract is plain Solidity. It uses no `payable` functions and no native balances, so it needs no changes for NVNM Chain.
 
-Each check-in writes new storage slots. On Tempo, each new slot costs 250,000 gas, so a check-in costs more gas than it would on Ethereum.
+Each check-in writes new storage slots. On NVNM Chain, each new slot costs 250,000 gas, so a check-in costs more gas than it would on Ethereum.
 
 ### Test locally
 
@@ -164,10 +158,10 @@ forge build
 forge test -vvv
 ```
 
-The demo dApp's tests use `forge-std` only. See `packages/contracts/test/CheckIn.t.sol`. For a local node with Tempo behavior, Tempo documents Anvil's Tempo mode:
+The demo dApp's tests use `forge-std` only. See `packages/contracts/test/CheckIn.t.sol`. To run a local node with the chain's behavior, start Anvil with the `--tempo` flag:
 
 ```bash
-# Start anvil in Tempo mode
+# Start a local node with the chain-specific behavior
 anvil --tempo
 
 # Fork a live network for local testing
@@ -176,7 +170,7 @@ anvil --tempo --fork-url $RPC_URL
 
 ### Write the deploy script
 
-The deploy script uses `CREATE2` through the deterministic deployer at `0x4e59b44847b379578588920cA78FbF26c0B4956C`. Tempo lists this Arachnid Create2 Factory as a [predeployed contract](https://tempo.xyz/developers/docs/quickstart/predeployed-contracts). The address depends only on the salt and the bytecode, so `CheckIn` lands at the same address on every chain. If the contract already exists at that address, the script logs it and sends nothing.
+The deploy script uses `CREATE2` through the deterministic deployer at `0x4e59b44847b379578588920cA78FbF26c0B4956C`. This Arachnid Create2 Factory is predeployed on NVNM Chain. The address depends only on the salt and the bytecode, so `CheckIn` lands at the same address on every chain. If the contract already exists at that address, the script logs it and sends nothing.
 
 ```solidity title="packages/contracts/script/CheckIn.s.sol"
 // SPDX-License-Identifier: MIT
@@ -221,12 +215,12 @@ contract CheckInScript is Script {
 View on GitHub: [`packages/contracts/script/CheckIn.s.sol`](https://github.com/NVNM-Chain/nvnm-demo-dapp/blob/main/packages/contracts/script/CheckIn.s.sol)
 
 <Note>
-  Tempo's draft [TIP-1047](https://tempo.xyz/developers/docs/protocol/tips/tip-1047) proposes rejecting any `CREATE`, `CREATE2`, or EIP-7702 authorization "that would produce or delegate to an address starting with the TIP-20 token prefix (`0x20C000000000000000000000`)". Tempo lists its status as Draft.
+  A protocol proposal, still in draft, would reject any `CREATE`, `CREATE2`, or EIP-7702 authorization whose resulting or delegated address begins with the TIP-20 token prefix (`0x20C000000000000000000000`).
 </Note>
 
 ### Choose a fee token (optional)
 
-Foundry's Tempo support adds a `--tempo.fee-token <ADDRESS>` flag to `forge script`, `forge create`, and `cast`. It sets the TIP-20 token that pays the transaction fee. Add it to the broadcast command if you want to pay in a token other than the default. The demo dApp doesn't use it. For the full list of `--tempo.*` flags, see the [Tempo Foundry docs](https://tempo.xyz/developers/docs/sdk/foundry).
+Foundry provides a `--tempo.fee-token <ADDRESS>` flag for `forge script`, `forge create`, and `cast`. It sets the TIP-20 token that pays the transaction fee. Add it to the broadcast command if you want to pay in a token other than the default. The demo dApp doesn't use it. The flag is one of several `--tempo.*` options.
 
 ### Run the deployment
 
@@ -249,7 +243,7 @@ Foundry's Tempo support adds a `--tempo.fee-token <ADDRESS>` flag to `forge scri
     | `DEPLOYER_PRIVATE_KEY` | unset: `--account`, or anvil account #0 | Key that signs the deployment |
     | `CHECKIN_SALT` | `keccak256("nvnm-demo-dapp.CheckIn")` | `CREATE2` salt. Change it to deploy a fresh instance. |
 
-    Tempo requires a root key for deployments: "Access keys can sign calls but not deployments." Ledger and Trezor wallets are not yet compatible with any `--tempo.*` option.
+    Deploy from a root key. Access keys are limited to calling existing contracts. You can't combine a hardware wallet (Ledger or Trezor) with the `--tempo.*` options yet.
   </Step>
 
   <Step title="Fund the deployer">
@@ -283,7 +277,7 @@ Foundry's Tempo support adds a `--tempo.fee-token <ADDRESS>` flag to `forge scri
 </Steps>
 
 <Warning title="Why --skip-simulation">
-  The demo dApp's contracts README (`packages/contracts/README.md`) explains: "Tempo EVM charges much more gas for creating state than stock Foundry models. Foundry's local estimate for CheckIn is ~320k gas; the chain needs ~1.77M on devnet and ~2.02M on testnet. With the simulation, broadcasts fail with `call gas cost … exceeds the gas limit` or run out of gas. Skipping it makes Forge ask the node for the gas limit." This matches Tempo's [TIP-1000](https://tempo.xyz/developers/docs/protocol/tips/tip-1000) pricing, which charges 500,000 gas per contract creation plus 1,000 gas per byte of code.
+  The demo dApp's contracts README (`packages/contracts/README.md`) explains the reason. The chain charges far more gas to create state than stock Foundry models. Foundry estimates about 320k gas for `CheckIn` locally, but the chain needs about 1.77M on devnet and about 2.02M on testnet. With simulation on, broadcasts fail with `call gas cost … exceeds the gas limit` or run out of gas. When you skip simulation, Forge asks the node for the gas limit instead. These numbers are consistent with the chain's contract creation pricing: 500,000 gas per contract plus 1,000 gas per byte of code.
 </Warning>
 
 ### Check the deployment
@@ -310,12 +304,12 @@ The demo dApp's `CheckIn` is deployed at the same address on both networks:
 The address is the same, but each network keeps its own check-ins and its own count.
 
 <Note title="Contract verification">
-  Tempo's verification service at `contracts.tempo.xyz` lists only Tempo's own networks (chain IDs `4217`, `42431`, and `31318`), not NVNM chain IDs. The demo dApp doesn't document a verification step. See [Verify contracts](https://tempo.xyz/developers/docs/quickstart/verify-contracts) in the Tempo docs.
+  The demo dApp doesn't document a contract verification step.
 </Note>
 
 ## Interact from a React app
 
-Tempo ships [TypeScript SDK extensions](https://tempo.xyz/developers/docs/sdk/typescript) for Viem and Wagmi. Tempo recommends Wagmi for applications and wallets, and Viem for scripts and servers. The demo dApp uses wagmi v3 with the standard `useReadContract` and `useWriteContract` hooks.
+The viem and wagmi libraries both include extensions for the chain's features, in `viem/tempo` and `wagmi/tempo`. Pick wagmi when you build a frontend or a wallet. Pick viem for backend code such as scripts and servers. The demo dApp is a React app, so it uses wagmi v3 with the standard `useReadContract` and `useWriteContract` hooks.
 
 <Note>
   wagmi v3 renames some hooks. Use `useConnection` instead of `useAccount`. Mutation hooks such as `useWriteContract` run through `.mutate`.
@@ -577,6 +571,6 @@ For the fee and TIP-20 transfer errors, see [Token balances and fees](/developer
     Read nUSD balances, send TIP-20 transfers, and understand how fees are paid.
   </Card>
   <Card title="Build passkey wallets" icon="plug" href="/developer-guides/passkey-wallets">
-    Create P256 passkey accounts and sign Tempo transactions.
+    Create P256 passkey accounts and sign NVNM Chain's native `0x76` transactions.
   </Card>
 </CardGroup>

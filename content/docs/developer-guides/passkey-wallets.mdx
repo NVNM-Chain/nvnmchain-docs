@@ -1,10 +1,10 @@
 ---
 title: "Build passkey wallets"
-description: "Create NVNM Chain accounts from passkeys, store and restore them, and sign transactions with Face ID, Touch ID, a security key or supported password managers, using Tempo's native WebAuthn/P256 (aka secp256r1) support."
+description: "Create NVNM Chain accounts from passkeys, store and restore them, and sign transactions with Face ID, Touch ID, a security key or supported password managers, using NVNM Chain's native WebAuthn/P256 (aka secp256r1) support."
 icon: "fingerprint"
 ---
 
-NVNM Chain NEXT is an L1 forked from Tempo. Tempo verifies passkey (WebAuthn/P256) signatures in the protocol itself, so you can turn a passkey into an account without a smart-contract wallet, bundler or seed phrase.
+NVNM Chain verifies passkey (WebAuthn/P256) signatures in the protocol itself. You can turn a passkey into an account without a smart-contract wallet, bundler or seed phrase.
 
 This guide explains how NVNM Chain supports passkeys. It then walks through the passkey wallet in the NVNM demo dApp. You learn how to create an account, store its public key, restore it in a new browser and sign transactions.
 
@@ -14,32 +14,28 @@ This guide explains how NVNM Chain supports passkeys. It then walks through the 
 
 ## How passkeys work on the chain
 
-Tempo's docs explain why passkeys need protocol support:
+Standard Ethereum accounts accept only secp256k1 signatures and use sequential nonces. That rules out modern sign-in methods such as passkeys, and sequential nonces cap how many transactions an app can push through at once.
 
-> Current accounts are limited to secp256k1 signatures and sequential nonces, creating UX and scalability challenges. Users cannot leverage modern authentication methods like passkeys, applications face throughput limitations due to sequential nonces.
-
-Tempo solves this with Tempo Transactions, "a new [EIP-2718](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-2718.md) transaction type" with type byte `0x76`. The first native feature the [Tempo Transaction specification](https://tempo.xyz/developers/docs/protocol/transactions/spec-tempo-transaction) lists is "WebAuthn/P256 signature validation - enables passkey signing". Tempo sums up what this means for wallets:
-
-> Tempo Transactions natively support secp256k1, P256, and WebAuthn signatures. The protocol verifies these signatures directly, so passkey authentication works without custom contracts.
->
-> — [Tempo docs: EIP-4337 comparison](https://tempo.xyz/developers/docs/protocol/transactions/eip-4337)
+NVNM Chain addresses this with its native transaction type (`0x76`), an [EIP-2718](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-2718.md) typed transaction. Besides secp256k1, a `0x76` transaction can carry a P256 or WebAuthn signature, and the protocol validates it directly. A passkey can therefore sign transactions without a verifier contract or a smart-contract wallet.
 
 The demo dApp describes its passkey account the same way: "a chain-native WebAuthn P-256 account" (`apps/web/README.md`).
 
 ### Signature types
 
-"Four signature schemes are supported. The signature type is determined by length and type identifier" ([specification](https://tempo.xyz/developers/docs/protocol/transactions/spec-tempo-transaction)). The spec also notes: "Different signature types incur different base transaction costs to reflect their computational complexity." The last column shows that base transaction cost, not the cost of the signature check alone. The secp256k1 base of 21,000 "Includes 3,000 gas for ecrecover precompile", and P256 adds "additional 5k for P256 verification":
+A signature's first byte (or, for secp256k1, its 65-byte length) tells the chain which of four schemes it uses.
 
-| Type      | Wire format                                                                                                                                   | How Tempo verifies it                                                                                                | Base transaction gas                       |
+Each scheme has its own base transaction cost, which reflects how much computation its verification takes. The last column below shows that base transaction cost, not the cost of the signature check alone. The secp256k1 base of 21,000 gas already includes 3,000 gas for the `ecrecover` precompile. P256 adds another 5,000 gas for P256 verification.
+
+| Type      | Wire format                                                                                                                                   | How the chain verifies it                                                                                            | Base transaction gas                       |
 |-----------|-----------------------------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------|--------------------------------------------|
 | secp256k1 | 65 bytes, no type prefix (backward compatible)                                                                                                | Standard `ecrecover`                                                                                                 | 21,000                                     |
 | P256      | Prefix `0x01` + 129 bytes (`r`, `s`, `pub_key_x`, `pub_key_y`, `pre_hash`). 130 bytes total.                                                  | P256 curve verification with the provided public key. If `pre_hash` is `true`, the digest is `sha256(digest)` first. | 26,000                                     |
 | WebAuthn  | Prefix `0x02` + `webauthn_data` (`authenticatorData` ‖ `clientDataJSON`) + 128 bytes (`r`, `s`, `pub_key_x`, `pub_key_y`). 129 to 2049 bytes. | Parse `clientDataJSON`, verify challenge and type, then P256 verify                                                  | 26,000 + calldata gas for `clientDataJSON` |
 | Keychain  | Prefix `0x03` + `user_address` (20 bytes) + inner signature                                                                                   | Verify the inner signature, then validate the access key in the AccountKeychain precompile                           | Inner signature + 3,000                    |
 
-A passkey produces a WebAuthn signature. Tempo's WebAuthn struct looks like this:
+A passkey produces a WebAuthn signature with this layout:
 
-```rust title="Tempo Transaction spec: WebAuthn signature"
+```rust title="WebAuthn signature"
 pub struct WebAuthnSignature {
     typeId: u8,                 // 0x02
     webauthn_data: Bytes,       // Variable length (authenticatorData || clientDataJSON)
@@ -50,15 +46,13 @@ pub struct WebAuthnSignature {
 }
 ```
 
-Source: [Tempo Transaction specification](https://tempo.xyz/developers/docs/protocol/transactions/spec-tempo-transaction).
-
-Tempo also advises: "For TempoTransactions, wallets should send minimal authenticatorData (37 bytes, no AT/ED flags) to minimize gas costs and simplify parsing."
+Keep the WebAuthn payload small. If your wallet sends the minimum 37-byte `authenticatorData`, without the AT or ED flags, the transaction costs less gas and the chain has less to parse.
 
 ### How a passkey becomes an address
 
-For P256 and WebAuthn keys, Tempo derives the address from the public key alone:
+For P256 and WebAuthn keys, the chain derives the address from the public key alone:
 
-```solidity title="Tempo Transaction spec: P256 and WebAuthn address derivation"
+```solidity title="P256 and WebAuthn address derivation"
 function deriveAddressFromP256(bytes32 pubKeyX, bytes32 pubKeyY) public pure returns (address) {
     // Hash
     bytes32 hash = keccak256(abi.encodePacked(
@@ -71,74 +65,71 @@ function deriveAddressFromP256(bytes32 pubKeyX, bytes32 pubKeyY) public pure ret
 }
 ```
 
-Source: [Tempo Transaction specification](https://tempo.xyz/developers/docs/protocol/transactions/spec-tempo-transaction).
-
 Two consequences follow for your app:
 
-- **You must keep the public key.** Tempo's viem guide warns you to store it: "A passkey only stores its credential id on the device, not the public key. Because the account address is derived from the public key, you must store it yourself (in a database or local storage) when the credential is created, then resolve it via `getPublicKey` when restoring" ([viem: Sign in with a passkey](https://viem.sh/tempo/guides/accounts/passkeys)).
+- **You must keep the public key.** The address is derived from the public key, but the device holds only the passkey's credential ID. The authenticator never hands the key back after registration. Record it when the passkey is created, for example on your server or in browser storage. When the user returns, supply it through `getPublicKey` in viem's passkey sign-in flow (see [viem: Sign in with a passkey](https://viem.sh/tempo/guides/accounts/passkeys)).
 - **One passkey is one account.** The formula takes no chain ID. The demo dApp tells its users: "Your address comes from the passkey, so creating another makes a new, empty account... It's the same address on testnet and devnet, with a separate balance on each."
 
 ### What the chain checks, and what it skips
 
-Tempo's [WebAuthn verification](https://tempo.xyz/developers/docs/protocol/transactions/spec-tempo-transaction) follows the [Daimo P256 verifier approach](https://github.com/daimo-eth/p256-verifier/blob/master/src/WebAuthn.sol). The challenge is the transaction hash, Base64URL-encoded, and the signed message is `sha256(authenticatorData || sha256(clientDataJSON))`.
+The chain's WebAuthn verification follows the [Daimo P256 verifier approach](https://github.com/daimo-eth/p256-verifier/blob/master/src/WebAuthn.sol). The challenge is the transaction hash, Base64URL-encoded. The signed message is `sha256(authenticatorData || sha256(clientDataJSON))`.
 
-| Tempo verifies                                  | Tempo skips                                                    |
-|-------------------------------------------------|----------------------------------------------------------------|
-| Authenticator data minimum length (37 bytes)    | Origin verification (not applicable to blockchain)             |
-| User Presence (UP) flag is set                  | RP ID hash validation (no central RP in decentralized context) |
-| `"type":"webauthn.get"` in `clientDataJSON`     | Signature counter (anti-cloning left to application layer)     |
-| Challenge matches `tx_hash` (Base64URL encoded) | Backup flags (account policy decision)                         |
-| P256 signature validity                         |                                                                |
+| The chain verifies                                     | The chain skips                                                                   |
+|--------------------------------------------------------|-----------------------------------------------------------------------------------|
+| `authenticatorData` length: 37 bytes or more           | Origin: a transaction isn't tied to a web page                                    |
+| User Presence (UP) flag: must be set                   | RP ID hash: there's no relying party to compare it against                        |
+| `clientDataJSON` type: `"type":"webauthn.get"`         | Signature counter: clone detection is up to your app                              |
+| Challenge: the transaction's `tx_hash`, in Base64URL   | Backup flags: whether to require backed-up passkeys is an account-level choice    |
+| P256 signature: must be valid                          |                                                                                   |
 
 Because the chain skips origin and RP ID checks, the chain does not bind a passkey to your domain. The browser does. Keep this in mind when you read the [security notes](#security-and-operational-notes).
 
 ### Passkey prompts and access keys
 
-With a passkey as the root key, every signature needs a passkey prompt. Tempo's [Account Keychain specification](https://tempo.xyz/developers/docs/protocol/transactions/AccountKeychain) says:
+If the passkey is the account's only key, every transaction triggers a biometric or PIN prompt. Apps that send many transactions in a row feel slow. The prompt may also be labeled "Sign in", which looks odd when the user is approving a transaction.
 
-> for an Account using a Passkey as its Root Key, the sender will subsequently be prompted with passkey prompts for every signature request. This can be a poor user experience for highly interactive or multi-step flows. Additionally, users would also see "Sign In" copy in prompts for signing transactions which is confusing.
+An access key fixes this. The passkey authorizes a separate, limited signing key once, and that key signs follow-up transactions without a prompt. The AccountKeychain precompile at `0xAAAAAAAA00000000000000000000000000000000` manages access keys.
 
-Tempo's answer is access keys. The same page introduces "the Root Key being able to provision a scoped Access Key that can be used for subsequent transactions, without the need for repetitive end-user prompting." The AccountKeychain precompile at `0xAAAAAAAA00000000000000000000000000000000` manages them. Note one restriction: "Access-key-signed transactions cannot perform `CREATE` or `CREATE2`, including via factory contracts. Use a Root Key for deployments."
+Contract creation is reserved for the root key. An access key can't sign a transaction that runs `CREATE` or `CREATE2`, whether directly or through a factory contract.
 
 <Note>
-  The demo dApp keeps access keys off. Every transaction asks for the passkey, and its UI warns users that "your device's prompt may say 'Sign in'". To add access keys, see Tempo's [Access Keys guide](https://viem.sh/tempo/guides/access-keys).
+  The demo dApp keeps access keys off. Every transaction asks for the passkey, and its UI warns users that "your device's prompt may say 'Sign in'". To add access keys, see viem's [access keys guide](https://viem.sh/tempo/guides/access-keys).
 </Note>
 
 ## The SDKs to use
 
-The demo dApp builds its passkey wallet on three TypeScript packages that carry Tempo support. Tempo's [TypeScript SDK page](https://tempo.xyz/developers/docs/sdk/typescript) links to the viem and wagmi integrations:
+The demo dApp builds its passkey wallet on three TypeScript packages that support NVNM Chain's `0x76` transactions:
 
-| Package                 | Role                                                                                                                    | Version in the demo dApp           |
-|-------------------------|-------------------------------------------------------------------------------------------------------------------------|------------------------------------|
-| `wagmi` (`wagmi/tempo`) | The `webAuthn` connector, "Connector for a WebAuthn EOA" ([wagmi.sh/tempo](https://wagmi.sh/tempo/connectors/webAuthn)) | `wagmi` 3.7.7, `@wagmi/core` 3.6.5 |
-| `accounts`              | The Tempo Accounts SDK. "`webAuthn` is a thin wagmi wrapper around the root `accounts` package."                        | 0.18.4                             |
-| `viem` (`viem/tempo`)   | Tempo chain config, `Account.fromWebAuthnP256` and the Tempo transaction serializers                                    | `^2.57.1` (2.57.1 resolved)        |
+| Package                 | Role                                                                                                       | Version in the demo dApp           |
+|-------------------------|------------------------------------------------------------------------------------------------------------|------------------------------------|
+| `wagmi` (`wagmi/tempo`) | The [`webAuthn` connector](https://wagmi.sh/tempo/connectors/webAuthn), which connects a WebAuthn EOA      | `wagmi` 3.7.7, `@wagmi/core` 3.6.5 |
+| `accounts`              | The Accounts SDK (the `accounts` package). The wagmi `webAuthn` connector is a thin wrapper around it.     | 0.18.4                             |
+| `viem` (`viem/tempo`)   | The chain config, `Account.fromWebAuthnP256` and the serializers for `0x76` transactions                   | `^2.57.1` (2.57.1 resolved)        |
 
 The demo dApp's passkey ceremony also uses `ox` 0.14.45 and `webauthx` 0.1.2, the versions `accounts` 0.18.4 resolves. Its `pnpm-workspace.yaml` pins `wagmi`, `@wagmi/core`, `accounts`, `ox` and `webauthx` to exact versions (viem is `^2.57.1`), so re-test before you bump them.
 
-Tempo's minimal setup registers the connector in a wagmi config:
+A minimal setup registers the connector in a wagmi config. This example uses the `nvnmTestnet` chain that the first step below defines in `chains.ts`:
 
-```ts title="wagmi.config.ts (from wagmi.sh/tempo)"
+```ts title="wagmi.config.ts"
 import { createConfig, http } from 'wagmi'
-import { tempo } from 'wagmi/chains'
 import { webAuthn } from 'wagmi/tempo'
+
+import { nvnmTestnet } from './chains'
 
 export const config = createConfig({
   connectors: [webAuthn()],
-  chains: [tempo],
+  chains: [nvnmTestnet],
   multiInjectedProviderDiscovery: false,
   transports: {
-    [tempo.id]: http(),
+    [nvnmTestnet.id]: http(),
   },
 })
 ```
 
-Source: [wagmi.sh/tempo](https://wagmi.sh/tempo/connectors/webAuthn).
-
-By default the connector runs the passkey ceremony in the browser. Tempo says: "Use `webAuthn({ authUrl: '/api/webauthn' })` if you want registration and authentication challenges to come from a server endpoint instead of the default local browser ceremony." To plug in your own ceremony, pass `ceremony`. The demo dApp does this.
+By default, the connector runs the passkey ceremony locally in the browser. To fetch registration and authentication challenges from a server endpoint instead, set `authUrl`: `webAuthn({ authUrl: '/api/webauthn' })`. To plug in your own ceremony, pass `ceremony`. The demo dApp does this.
 
 <Info>
-  Tempo's Accounts SDK docs recommend [Tempo Wallet](https://accounts.tempo.xyz/docs/adapters/tempo-wallet) for most apps, and "domain-bound passkeys when you want to build your own wallet experience or when your app needs to manage and own the WebAuthn ceremony directly" ([FAQ](https://accounts.tempo.xyz/docs/faq)). This guide covers the domain-bound option, which the demo dApp uses.
+  This guide uses domain-bound passkeys, as the demo dApp does. Your app creates and uses the passkeys under its own domain, so you control the wallet UI and the WebAuthn flow end to end.
 </Info>
 
 ## Build the passkey wallet
@@ -146,8 +137,8 @@ By default the connector runs the passkey ceremony in the browser. Tempo says: "
 The steps below follow the demo dApp's web app in `apps/web`. It is a React app with wagmi and Reown AppKit.
 
 <Steps>
-  <Step title="Add Tempo's chain config to the NVNM chains">
-    NVNM chains aren't built into viem, so the dApp defines them with `defineChain`. Passkey accounts send Tempo transactions (type `0x76`), so each chain also needs Tempo's formatters and serializers. The dApp copies exactly those keys from viem's `tempoModerato` chain:
+  <Step title="Add native transaction support to the NVNM chains">
+    NVNM chains aren't built into viem, so the dApp defines them with `defineChain`. Passkey accounts send `0x76` transactions, so each chain also needs the formatters and serializers for that transaction type. viem ships them on its `tempoModerato` chain, and the dApp copies exactly those keys:
 
     ```ts title="apps/web/src/config/chains.ts"
     import { defineChain, type Address, type Hash } from "viem";
@@ -272,11 +263,11 @@ The steps below follow the demo dApp's web app in `apps/web`. It is a React app 
 
     View on GitHub: [`apps/web/src/config/constant.ts`](https://github.com/NVNM-Chain/nvnm-demo-dapp/blob/main/apps/web/src/config/constant.ts)
 
-    The dApp passes the connector to `NvnmWagmiAdapter`, its own subclass of Reown AppKit's `WagmiAdapter`. The adapter's options are wagmi `createConfig` parameters. If you don't use AppKit, pass the same `connectors: [passkey]` and `transports` to wagmi's `createConfig`, as in Tempo's minimal setup above. Then wrap your app in `WagmiProvider` and `QueryClientProvider` as usual (see `apps/web/src/providers.tsx`).
+    The dApp passes the connector to `NvnmWagmiAdapter`, its own subclass of Reown AppKit's `WagmiAdapter`. The adapter's options are wagmi `createConfig` parameters. If you don't use AppKit, pass the same `connectors: [passkey]` and `transports` to wagmi's `createConfig`, as in the minimal setup above. Then wrap your app in `WagmiProvider` and `QueryClientProvider` as usual (see `apps/web/src/providers.tsx`).
   </Step>
 
   <Step title="Create a passkey account">
-    You create and sign in to passkey accounts through wagmi's `useConnect`. The `capabilities` you pass tell the Tempo Accounts SDK which WebAuthn ceremony to run. Tempo documents them on [`wallet_connect`](https://accounts.tempo.xyz/docs/rpc/wallet_connect) as "a discriminated union over `method` — `'register'` or `'login'`". The dApp's passkey view creates an account like this:
+    You create and sign in to passkey accounts through wagmi's `useConnect`. The `capabilities` you pass tell the Accounts SDK which WebAuthn ceremony to run. Their `method` field selects the variant: `'register'` or `'login'`. The dApp's passkey view creates an account like this:
 
     ```tsx title="apps/web/src/components/connect-dialog.tsx"
     type Capabilities = NonNullable<Parameters<PasskeyConnector["connect"]>[0]>["capabilities"];
@@ -367,7 +358,7 @@ The steps below follow the demo dApp's web app in `apps/web`. It is a React app 
 
     View on GitHub: [`apps/web/src/components/token-transfer.tsx`](https://github.com/NVNM-Chain/nvnm-demo-dapp/blob/main/apps/web/src/components/token-transfer.tsx)
 
-    With the passkey connector active, the SDK builds a Tempo transaction (type `0x76`). `viem/tempo`'s `Account.fromWebAuthnP256` passes the transaction hash to WebAuthn as the challenge, which matches Tempo's rule that the "Challenge matches tx_hash". The browser shows a passkey prompt for each transaction. Viem's guide puts it the same way: "The user is prompted to authorize with their passkey when the transaction is signed."
+    With the passkey connector active, the SDK builds a `0x76` transaction. `Account.fromWebAuthnP256` from `viem/tempo` passes the transaction hash to WebAuthn as the challenge. That satisfies the chain's check that the challenge equals `tx_hash`. The browser shows a passkey prompt each time the SDK signs a transaction.
 
     The dApp tracks the result with its `useTxOutcome` hook the same way for passkey accounts and browser wallets. See [Deploy and interact with smart contracts](/developer-guides/smart-contracts#track-the-transaction-outcome).
 
@@ -413,15 +404,15 @@ The steps below follow the demo dApp's web app in `apps/web`. It is a React app 
 
     View on GitHub: [`apps/web/src/lib/wallet-errors.ts`](https://github.com/NVNM-Chain/nvnm-demo-dapp/blob/main/apps/web/src/lib/wallet-errors.ts)
 
-    Tempo's production checklist gives the same advice: "Surface specific error messages for expired challenges, canceled prompts, and RP ID or origin mismatches so users (and support) can recover quickly" ([production checklist](https://accounts.tempo.xyz/docs/production)).
+    Extend the same mapping to the other passkey failures your users can hit, such as an expired challenge, or a page origin or RP ID that doesn't match the passkey. A precise message tells users what to do next and makes support requests easier to diagnose.
   </Step>
 </Steps>
 
 ## Where the dApp stores passkey data
 
-The dApp stores passkey data in IndexedDB, not `localStorage`. `Storage.idb` is the Accounts SDK's IndexedDB adapter. Tempo documents it as "the default storage for `Provider.create` in the browser" ([`Storage.idb`](https://accounts.tempo.xyz/docs/api/storage.idb)).
+The dApp stores passkey data in IndexedDB, not `localStorage`. `Storage.idb` is the Accounts SDK's IndexedDB adapter. In the browser, `Provider.create` uses this adapter unless you pass another one.
 
-The adapter writes to an IndexedDB database named `tempo`. It prefixes every key with `options.key`, which Tempo describes as "Useful when several apps share the same origin and you want to avoid key collisions."
+The adapter writes to an IndexedDB database named `tempo`. It prefixes every key with `options.key`. Give each app on a shared origin its own prefix. Otherwise one app can overwrite another's stored keys.
 
 With `key: "nvnm-demo-dapp"`, the dApp's data lives under these keys:
 
@@ -436,13 +427,13 @@ The SDK also persists its provider state, such as the connected accounts, throug
   The app never stores a private key. The authenticator holds it. The dApp stores only public keys and account metadata. Its UI says: "This site never sees its private key."
 </Warning>
 
-The key names come from the internals of `accounts` 0.18.4, which the dApp relies on. Tempo doesn't document them, so check them again when you upgrade the SDK.
+The key names come from the internals of `accounts` 0.18.4, which the dApp relies on. The SDK doesn't document them, so check them again when you upgrade it.
 
 ## Restore an account in a new browser
 
 WebAuthn returns a passkey's public key only when the passkey is created. If a user signs in from another device with a synced passkey, or after clearing site data, the browser has no stored key. The SDK's local ceremony then fails with `Unknown credential`.
 
-Tempo's guidance is to store the public key yourself, "in a database or local storage", and the Accounts SDK offers a server-backed ceremony for this. The demo dApp has no backend, so it uses its own technique instead. ECDSA public-key recovery yields two candidate public keys per signature. The dApp asks for a second signature from the same passkey, keeps the one key that both sets share, and stores it:
+The recommended fix is to save the public key on your side at registration time. The Accounts SDK provides a server-backed ceremony for this. The demo dApp has no backend, so it uses its own technique instead. ECDSA public-key recovery yields two candidate public keys per signature. The dApp asks for a second signature from the same passkey, keeps the one key that both sets share, and stores it:
 
 ```ts title="apps/web/src/lib/passkey-ceremony.ts"
 import { type Storage, WebAuthnCeremony } from "accounts";
@@ -564,17 +555,17 @@ Here is what this means for your users:
 - In a new browser, sign-in takes two prompts. The dApp tells users: "In a browser you haven't used this passkey in, you'll confirm twice so we can recover your account."
 - After recovery, the key is stored, so the next sign-in takes one prompt.
 
-`signedPayload` computes the same message that Tempo's WebAuthn verifier checks: `sha256(authenticatorData || clientDataHash)`.
+`signedPayload` computes the same message that the chain's WebAuthn verifier checks: `sha256(authenticatorData || clientDataHash)`.
 
 <Note>
-  Two-signature recovery is the demo dApp's own approach, not a Tempo feature.
+  Two-signature recovery is the demo dApp's own approach, not a feature of the chain or the SDK.
 </Note>
 
 ### Use a server-backed ceremony in production
 
-The SDK's source describes `WebAuthnCeremony.local` as "a pure client-side ceremony for development and prototyping". For production, Tempo documents a server-backed ceremony. Mount `Handler.webAuthn` from `accounts/server`. Then point the connector at it with `webAuthn({ authUrl: '/auth' })`:
+`WebAuthnCeremony.local` generates and checks challenges in the browser, with no server involved. That's convenient while you build, but a production app should issue challenges from its own server. The SDK's server-backed ceremony does this. Mount `Handler.webAuthn` from `accounts/server`. Then point the connector at it with `webAuthn({ authUrl: '/auth' })`:
 
-```ts title="Server (from accounts.tempo.xyz)"
+```ts title="Server"
 import { Handler, Kv } from 'accounts/server'
 
 export const handler = Handler.webAuthn({
@@ -584,7 +575,7 @@ export const handler = Handler.webAuthn({
 })
 ```
 
-Tempo warns: "`Kv.memory()` is fine for local development and tests, but not for production. Use a persistent `Kv` adapter instead." Source: [WebAuthn adapter guide](https://accounts.tempo.xyz/docs/adapters/webauthn).
+The example keeps challenges in memory with `Kv.memory()`, which loses them on restart and isn't shared across instances. Swap in a persistent `Kv` adapter before you deploy.
 
 ## Security and operational notes
 
@@ -596,19 +587,15 @@ The browser binds every passkey to an RP ID. In the demo dApp, the RP ID is the 
 >
 > — Demo dApp `README.md`
 
-Tempo's Accounts SDK docs give the same warning about your choice of RP ID:
+Decide on `rpId` early. A passkey registered for a parent domain (`example.com`) can be used on its subdomains, such as `app.example.com`, as WebAuthn's RP rules permit. A passkey registered for a subdomain (`app.example.com`) can't move up to the parent domain (`example.com`).
 
-> Choose `rpId` carefully before you ship. If you register with `rpId: 'example.com'`, that credential can be used from `app.example.com` and other subdomains that satisfy WebAuthn's RP rules. But the reverse is not true: a passkey created with `rpId: 'app.example.com'` cannot later be used with `rpId: 'example.com'`.
->
-> — [WebAuthn adapter: Origin and RP ID](https://accounts.tempo.xyz/docs/adapters/webauthn)
-
-Tempo also says: "Treat `rpId` like part of your public API. Changing it later can strand existing credentials and force users to register new passkeys."
+Changing `rpId` after launch is effectively a breaking change. Passkeys registered under the old value may no longer be usable, and affected users would have to create new ones.
 
 The browser enforces this binding. NVNM Chain doesn't.
 
 ### Serve passkeys from a secure origin
 
-- Tempo says: "WebAuthn requires a [secure context](https://developer.mozilla.org/en-US/docs/Web/Security/Secure_Contexts) outside of `localhost`. Production passkey ceremonies will fail outright over HTTP."
+- Browsers expose WebAuthn only in a [secure context](https://developer.mozilla.org/en-US/docs/Web/Security/Secure_Contexts): HTTPS pages, plus `localhost` for development. Deploy over HTTPS, or passkey creation and sign-in won't start at all.
 - In development, open your app at `localhost`. The dApp's README warns: "an IP address such as `127.0.0.1` isn't a valid passkey domain, so passkeys fail there."
 - `localhost` and your production host hold different passkeys, so they are different accounts.
 
@@ -616,7 +603,7 @@ The browser enforces this binding. NVNM Chain doesn't.
 
 There is no seed phrase. The dApp warns its users: "If every copy of the passkey is lost or deleted, the account and its funds are gone. Passkeys synced by iCloud Keychain or Google Password Manager also work on your other devices signed in to the same Apple or Google account."
 
-Tempo adds that "you should not assume every user has sync enabled or access to the same provider on every device. A user can also lose all registered authenticators at once." Tempo advises you to "Plan for multiple credentials per user from the start" ([Account recovery](https://accounts.tempo.xyz/docs/adapters/webauthn)).
+Not every user has passkey sync turned on, and some use different password managers on different devices. Losing all of a user's devices at once is possible too. Let users register more than one passkey from the start, so one lost device doesn't lock them out.
 
 ### Fund new accounts
 
@@ -653,17 +640,13 @@ The dApp uses nUSD, the TIP-20 at `0x20C0000000000000000000000000000000000000`, 
   </Step>
 </Steps>
 
-## Learn more in the Tempo docs
+## Further reading
 
-- [Tempo Transactions](https://tempo.xyz/developers/docs/protocol/transactions)
-- [Tempo Transaction specification](https://tempo.xyz/developers/docs/protocol/transactions/spec-tempo-transaction): signature types, address derivation and WebAuthn verification
-- [Account Keychain specification](https://tempo.xyz/developers/docs/protocol/transactions/AccountKeychain): access keys
-- [Tempo Transactions compared with EIP-4337](https://tempo.xyz/developers/docs/protocol/transactions/eip-4337)
-- [Tempo TypeScript SDKs](https://tempo.xyz/developers/docs/sdk/typescript)
 - [wagmi `webAuthn` connector](https://wagmi.sh/tempo/connectors/webAuthn)
 - [viem: Sign in with a passkey](https://viem.sh/tempo/guides/accounts/passkeys)
-- [Tempo Accounts SDK: WebAuthn adapter](https://accounts.tempo.xyz/docs/adapters/webauthn)
-- [Tempo Accounts SDK: production checklist](https://accounts.tempo.xyz/docs/production)
+- [Accounts SDK: WebAuthn adapter](https://accounts.tempo.xyz/docs/adapters/webauthn): RP ID, server ceremony and account recovery
+- [Accounts SDK: `wallet_connect`](https://accounts.tempo.xyz/docs/rpc/wallet_connect): `register` and `login` capabilities
+- [Accounts SDK: production checklist](https://accounts.tempo.xyz/docs/production)
 
 ## Next steps
 

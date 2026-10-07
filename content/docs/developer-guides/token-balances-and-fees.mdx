@@ -4,7 +4,7 @@ description: "Why wallets show a placeholder balance on NVNM Chain, how fees are
 icon: "coins"
 ---
 
-NVNM Chain NEXT is an L1 forked from Tempo. Like Tempo, it has no native gas token. You pay fees in a USD-denominated TIP-20 stablecoin, and on NVNM Chain the default fee token is nUSD. This guide explains what that means for balances, how Tempo's fee mechanism works, and how to read and transfer nUSD from a dApp.
+NVNM Chain NEXT is an L1 built on a fork of the Tempo stack. NVNM Chain has no native gas token. You pay fees in a USD-denominated TIP-20 stablecoin, and the default fee token is nUSD. This guide explains what that means for balances, how NVNM Chain's fee rules work, and how to read and transfer nUSD from a dApp.
 
 <Tip title="Try it in the demo dApp">
   Open the [NVNM demo dApp](https://nvnm-chain.github.io/nvnm-demo-dapp/) and use the **Send nUSD** card to see your nUSD balance and send a transfer. The TypeScript samples on this page come from the demo dApp's source ([NVNM-Chain/nvnm-demo-dapp](https://github.com/NVNM-Chain/nvnm-demo-dapp) on GitHub).
@@ -17,26 +17,24 @@ Before you start:
 
 ## There is no native token
 
-Tempo's docs put it plainly: "Remember that on Tempo, there is no native gas token." NVNM Chain inherits this. There is no ETH-like coin, and every amount you care about lives in a TIP-20 token.
+NVNM Chain has no native gas token. There is no ETH-like coin, and every amount you care about lives in a TIP-20 token.
 
 ### Why your wallet shows a huge balance
 
-Wallets still assume every chain has a native coin. To show it, they call the `eth_getBalance` RPC method. Tempo's docs explain what happens next:
+Wallets still assume every chain has a native coin. To show it, they call the `eth_getBalance` RPC method. The wallet expects a hex string back, and it reads that value as a native balance with 18 decimals.
 
-> When a wallet calls this method, it expects a hex string representing the "native token balance", hard-coded to be represented as an 18-decimal place number.
->
-> On Tempo, the `eth_getBalance` method returns a hex string representing an extremely large number. Specifically it returns: `0x9612084f0316e0ebd5182f398e5195a51b5ca47667d4c9b26c9b26c9b26c9b2` which is represented in decimals as 4.242424242424242e+75.
+NVNM Chain has no native balance to report. Instead, `eth_getBalance` returns the same very large hex value for every address: `0x9612084f0316e0ebd5182f398e5195a51b5ca47667d4c9b26c9b26c9b26c9b2`. In decimal, that is about 4.242424242424242e+75.
 
 That placeholder is why wallets show a number such as `4,242,424,2…` next to USD or nUSD:
 
 <Frame>
 
-![Wallet asset list showing a balance of 4,242,424,2… for USD on Tempo Testnet (Moderato) and for nUSD on NVNM Tempo Devnet 1 and NVNM Tempo Testnet 1](/images/developer-guides/wallet-placeholder-balance.png)
+![Wallet asset list showing a placeholder balance of 4,242,424,2… for nUSD on NVNM Tempo Devnet 1 and NVNM Tempo Testnet 1, and for USD on another network](/images/developer-guides/wallet-placeholder-balance.png)
 
 </Frame>
 
 <Warning title="This is not your balance">
-  The number is a placeholder, not money you can spend. As Tempo's connection guide says: "On Tempo, there is no native gas token, and so the value shown is a placeholder." The symbol next to it (USD or nUSD) comes from the network settings in your wallet. Your real balance is your nUSD TIP-20 balance.
+  The number is a placeholder, not money you can spend. NVNM Chain has no native gas token, so the wallet has nothing real to show here. The symbol next to it (USD or nUSD) comes from the network settings in your wallet. Your real balance is your nUSD TIP-20 balance.
 </Warning>
 
 You can see the placeholder yourself. Any address returns the same value:
@@ -48,22 +46,20 @@ curl -s -X POST -H 'content-type: application/json' \
 # {"jsonrpc":"2.0","id":1,"result":"0x9612084f0316e0ebd5182f398e5195a51b5ca47667d4c9b26c9b26c9b26c9b2"}
 ```
 
-In testnet, `eth_getBalance` returns a large placeholder value for the native token balance to unblock existing assumptions wallets have about the native token balance. Tempo also notes that wallets which check a native balance first may show "an error message like 'Insufficient balance'". The `curl` output above shows that NVNM Chain Testnet returns the same value.
+The chain returns this oversized value on purpose, so wallets that assume a native balance keep working. A wallet that checks the native balance before it sends may show an error such as "Insufficient balance".
 
 ### What we recommend
 
-- **Don't check or show a native balance.** If your app checks `eth_getBalance`, remove that check. Don't show any "native balance" in your UI.
-- **Check the fee token balance instead.** If you use `eth_getBalance` to validate a user's balance, you should instead check the user's account fee token balance on NVNM Chain.
+- **Drop native balance logic.** Your app should never read `eth_getBalance` or display its result, because the value means nothing on NVNM Chain.
+- **Validate against the fee token.** To confirm a user can pay, read their nUSD (or chosen fee token) balance with TIP-20 `balanceOf`.
 - **Use `USD` as the currency symbol** when a wallet needs one.
 
 Inside the EVM, native balances are always zero:
 
-| Feature                     | Behavior on Tempo | Alternative                    |
-|-----------------------------|-------------------|--------------------------------|
-| `BALANCE` and `SELFBALANCE` | Always returns 0  | Use TIP-20 `balanceOf` instead |
-| `CALLVALUE`                 | Always returns 0  | There is no alternative        |
-
-Learn more in the Tempo docs: [EVM differences](https://tempo.xyz/developers/docs/quickstart/evm-compatibility#handling-eth-native-token-balance-checks) and [wallet developer guide](https://tempo.xyz/developers/docs/quickstart/wallet-developers).
+| Feature                     | NVNM Chain behavior | Alternative                    |
+|-----------------------------|---------------------|--------------------------------|
+| `BALANCE` and `SELFBALANCE` | Always returns 0    | Use TIP-20 `balanceOf` instead |
+| `CALLVALUE`                 | Always returns 0    | There is no alternative        |
 
 ### Add the network to a wallet
 
@@ -77,7 +73,7 @@ export const walletNativeCurrency = { name: nUSD.name, symbol: nUSD.symbol, deci
 
 View on GitHub: [`apps/web/src/config/chains.ts`](https://github.com/NVNM-Chain/nvnm-demo-dapp/blob/main/apps/web/src/config/chains.ts)
 
-Tempo recommends the symbol `USD`. The demo dApp uses `nUSD` instead, to match NVNM Chain's fee token name. Either way, the label is cosmetic.
+The demo dApp uses the symbol `nUSD`, to match NVNM Chain's fee token name. `USD` works too. Either way, the label is cosmetic.
 
 Pass it when you switch networks. This excerpt is from the network picker. `switchChain` comes from wagmi's `useSwitchChain`, and `c` is the chain the user clicked, one of the chains from wagmi's `useChains`:
 
@@ -98,43 +94,51 @@ The wallet then labels the placeholder from `eth_getBalance` as nUSD. Always rea
 
 ## How fees work
 
-From Tempo's fee overview: "Tempo has no native token. Instead, transaction fees—including both gas fees and priority fees—can be paid directly in stablecoins." For a stablecoin to be accepted as a fee token, "it must be USD-denominated, issued as a native TIP-20 contract, and have sufficient liquidity on the native Fee AMM."
+Because NVNM Chain has no native token, you pay every transaction fee in a stablecoin. Both parts of the fee, gas and priority tip, come out of a stablecoin balance. A stablecoin can act as a fee token only if it meets three conditions:
+
+- Its `currency` is `USD`.
+- It is a TIP-20 token.
+- The Fee AMM holds enough of it to convert fees into the validator's token.
 
 On NVNM Chain, the default fee token is **nUSD**, a TIP-20 at `0x20C0000000000000000000000000000000000000` with 6 decimals. The demo dApp calls it "the default fee token". Your nUSD balance covers both what you send and the fee.
 
 <Note>
-  Tempo's docs use pathUSD, USDG, AlphaUSD and other tokens in their examples. On NVNM Chain, use nUSD at `0x20C0000000000000000000000000000000000000`. It is the same token at the same address on Testnet and Devnet.
+  SDK and library examples often use other token names, such as pathUSD, USDG or AlphaUSD. On NVNM Chain, use nUSD at `0x20C0000000000000000000000000000000000000`. It is the same token at the same address on Testnet and Devnet.
 </Note>
 
 ### Fee units
 
-Tempo uses a bounded dynamic base fee: "It can fall when block gas usage is below target and rise back toward the cap when the network is busy." All fees go to the validator who proposes the block.
+The base fee changes over time and has an upper cap. When the network is busy, it sits at or near that cap. When blocks are less full than the gas target, it goes down. The validator that proposes a block receives all of its fees.
 
-Fees are priced in **attodollars** (10^-18 USD) per gas. From the [fee specification](https://tempo.xyz/developers/docs/protocol/fees/spec-fee#fee-units):
+Fees are priced in **attodollars** (10^-18 USD) per gas. This unit applies to three fields:
 
-> Fees in the `max_base_fee_per_gas` and `max_fee_per_gas` fields of transactions, as well as in the block's `base_fee_per_gas` field, are specified in **attodollars** (10^-18 USD) per gas. Since TIP-20 tokens have 6 decimal places — where 1 token unit = 1 **microdollar** (10^-6 USD) — the fee for a transaction can be calculated as `ceil(base_fee * gas_used / 10^12)`.
+- The transaction's `max_base_fee_per_gas`
+- The transaction's `max_fee_per_gas`
+- The block's `base_fee_per_gas`
 
-Tempo also charges more for creating state than Ethereum does. Per Tempo, "transfers to new addresses cost ~300k gas, and contract deployments cost 5-10x more than on Ethereum." Set your gas limits with that in mind.
+TIP-20 tokens use 6 decimals, so 1 base unit of a token equals 1 **microdollar** (10^-6 USD). To get a transaction's fee in token units, compute `ceil(base_fee * gas_used / 10^12)`.
+
+Budget extra gas for anything that creates new state. Sending tokens to a new address takes about 300k gas. Deploying a contract takes 5 to 10 times the gas it would on Ethereum. Set your gas limits with that in mind.
 
 ### Which token pays the fee
 
-Tempo picks the fee token for each transaction by checking five levels, in this order:
+NVNM Chain picks the fee token for each transaction by checking five levels, in this order:
 
-1. **Transaction**: the `fee_token` field of a Tempo Transaction (type `0x76`). This "overrides any preferences set at the account, contract, or validator level."
+1. **Transaction**: the `fee_token` field of a transaction that uses NVNM Chain's native transaction type (`0x76`). When set, it takes priority over every account, contract and validator preference.
 2. **Account**: a default the fee payer sets by calling `setUserToken` on the FeeManager precompile (`0xfeec000000000000000000000000000000000000`).
-3. **TIP-20 contract**: if the top-level call is `transfer`, `transferWithMemo` or `startReward` on a USD TIP-20 token, that token pays the fee. For Tempo Transactions, this applies only if all top-level calls go to the same TIP-20 contract using these functions, and the fee payer is the sender.
+3. **TIP-20 contract**: if the top-level call is `transfer`, `transferWithMemo` or `startReward` on a USD TIP-20 token, that token pays the fee. A `0x76` transaction can batch several calls. It qualifies only when every top-level call is one of these functions on one TIP-20 token, and the sender pays its own fee.
 4. **Stablecoin DEX**: for certain swap calls, the `tokenIn` argument pays the fee.
-5. **pathUSD**: the fallback.
+5. **nUSD**: the fallback, the predeployed token at `0x20C0000000000000000000000000000000000000`.
 
 The protocol stops at the first level that sets a token. At that level, it checks that the token is a USD TIP-20, that the user can cover the gas limit at the transaction's gas price, and that the Fee AMM has enough liquidity. If any check fails, the transaction is invalid.
 
-On Tempo, pathUSD is the token at the predeployed address `0x20c0000000000000000000000000000000000000`. On NVNM Chain, that address holds nUSD. In practice:
+In practice:
 
 - **A nUSD transfer pays its fee in nUSD** through the TIP-20 contract rule.
 - **A call to any other contract**, such as your own smart contract, uses the fallback unless the transaction sets `fee_token` or the fee payer has set an account fee token with `setUserToken`. The demo dApp sets neither. Its chain config notes that, unset, "the chain charges nUSD."
 
 <Info title="The full amount reaches the recipient">
-  When you transfer the token that also pays the fee, Tempo sends the amount in full. Per Tempo: "the full amount of the token will be transferred **and** the sender's balance will be reduced by the amount spent in fees." So keep a little nUSD back for the fee.
+  When you transfer the token that also pays the fee, the recipient still gets the whole amount. The fee comes out of your balance on top of it. So keep a little nUSD back for the fee.
 </Info>
 
 ### Fee lifecycle
@@ -159,31 +163,27 @@ The `FeeManager` precompile collects and settles every fee:
   </Step>
 </Steps>
 
-The **Fee AMM** is a protocol-run market for converting fees between stablecoins. Tempo describes it as "protocol-driven: it converts transaction-fee payments into validators' preferred tokens at a fixed price, and only the protocol (and arbitrageurs rebalancing it) swaps against it — it is not a trading venue." Liquidity providers earn the 0.3% difference.
-
-Learn more in the Tempo docs: [Fees](https://tempo.xyz/developers/docs/protocol/fees), [fee specification](https://tempo.xyz/developers/docs/protocol/fees/spec-fee) and [Fee AMM](https://tempo.xyz/developers/docs/protocol/fees/fee-amm).
+The **Fee AMM** is a protocol-run market for converting fees between stablecoins. Validators can ask to be paid in a different stablecoin than the one you pay with. The Fee AMM handles that conversion at a fixed price. It is not an exchange you can trade on. The protocol swaps against it when it settles fees, and arbitrageurs swap against it to rebalance its pools. Liquidity providers earn the 0.3% difference.
 
 ### Choosing a fee token and sponsoring fees
 
-Tempo offers these options for fee setup:
+You have these options for fee setup:
 
-| Goal                                          | Tempo approach                        |
+| Goal                                          | How to do it                          |
 |-----------------------------------------------|---------------------------------------|
 | Choose the fee token for one transaction      | Pass `feeToken`                       |
 | Set an account's persistent default fee token | Call `setUserToken` on the FeeManager |
 | Have another account pay the fee              | Pass the account as `feePayer`        |
 
-Fee sponsorship uses the `fee_payer_signature` field of Tempo Transactions. Per Tempo, the sender signs "over a blank fee token field", which delegates the fee token choice to the fee payer. "If no `fee_payer_signature` is provided, then the `fee_payer` of the transaction is its sender." The fee token "cannot be set from Solidity — it is a transaction-level parameter handled by the signing SDK."
+Fee sponsorship uses the `fee_payer_signature` field of `0x76` transactions. The sender signs the transaction with the fee token field left empty, which lets the fee payer choose the fee token. Without a `fee_payer_signature`, the sender is the fee payer. Contracts have no way to pick the fee token. The choice lives in the signed transaction, so your signing SDK sets it when it builds the transaction.
 
 <Warning title="Browser wallets and feeToken">
   The demo dApp leaves `feeToken` unset on purpose. Its chain config explains: "A fee token in a request makes viem send browser wallets a 0x76 transaction, which MetaMask can't sign." Leave `feeToken` unset when your users sign with MetaMask or similar wallets. The demo dApp doesn't use `setUserToken` or fee sponsorship.
 </Warning>
 
-Learn more in the Tempo docs: [Pay fees in any stablecoin](https://tempo.xyz/developers/docs/guide/payments/pay-fees-in-any-stablecoin).
-
 ## TIP-20 basics
 
-Per Tempo, "TIP-20 tokens are a suite of precompiles that provide a built-in optimized token implementation in the core protocol. They extend the ERC-20 token standard with built-in functionality like memo fields and transfer policies." Only TIP-20 tokens can pay fees, and only those whose `currency` is `"USD"`.
+TIP-20 is NVNM Chain's token standard. Each TIP-20 token is a precompile, so its optimized token logic is built into the protocol instead of deployed as contract bytecode. TIP-20 is compatible with ERC-20 and adds memo fields and transfer policies. Only TIP-20 tokens can pay fees, and only those whose `currency` is `"USD"`.
 
 You need these functions to show balances and send tokens:
 
@@ -195,10 +195,8 @@ You need these functions to show balances and send tokens:
 | `transferWithMemo(address to, uint256 amount, bytes32 memo)` | Like `transfer`, plus a fixed 32-byte memo emitted in a dedicated event |
 
 <Note>
-  TIP-20 tokens reject some recipients. Per Tempo, a transfer to the zero address or to any TIP-20 token address (prefix `0x20c000000000000000000000`) "must revert with `InvalidRecipient`." That includes nUSD's own address.
+  TIP-20 tokens reject some recipients. A transfer to the zero address reverts with `InvalidRecipient`. So does a transfer to any TIP-20 token address (prefix `0x20c000000000000000000000`), including nUSD's own address.
 </Note>
-
-Learn more in the Tempo docs: [TIP-20 specification](https://tempo.xyz/developers/docs/protocol/tip20/spec).
 
 ## Display the nUSD balance
 
@@ -336,7 +334,7 @@ The demo dApp never reads `eth_getBalance`. It reads nUSD's `balanceOf` and form
 
 ## Transfer nUSD
 
-A nUSD transfer is a plain TIP-20 `transfer` call. Because the top-level call is `transfer` on a USD TIP-20, Tempo's fee rules make nUSD pay the fee too.
+A nUSD transfer is a plain TIP-20 `transfer` call. Because the top-level call is `transfer` on a USD TIP-20, NVNM Chain's fee rules make nUSD pay the fee too.
 
 ### Send the transfer
 
@@ -421,16 +419,11 @@ const known: [matches: (error: ErrorLike) => boolean, message: string][] = [
 
 View on GitHub: [`apps/web/src/lib/wallet-errors.ts`](https://github.com/NVNM-Chain/nvnm-demo-dapp/blob/main/apps/web/src/lib/wallet-errors.ts)
 
-## Learn more in the Tempo docs
-
-- [Connection details](https://tempo.xyz/developers/docs/quickstart/connection-details)
-- [Predeployed contracts](https://tempo.xyz/developers/docs/quickstart/predeployed-contracts)
-
 ## Next steps
 
 <CardGroup cols={2}>
   <Card title="Build passkey wallets" icon="plug" href="/developer-guides/passkey-wallets">
-    Create wallets and sign transactions with passkeys, using Tempo's native P256 support.
+    Create wallets and sign transactions with passkeys, using NVNM Chain's native P256 support.
   </Card>
   <Card title="Deploy and interact with smart contracts" icon="code" href="/developer-guides/smart-contracts">
     Deploy contracts to NVNM Chain and call them from your dApp.
