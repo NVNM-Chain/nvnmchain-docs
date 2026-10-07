@@ -251,8 +251,7 @@ The steps below follow the demo dApp's web app in `apps/web`. It is a React app 
     // The passkey wallet's reverse-DNS id. The accounts SDK announces its provider over EIP-6963 under this id, and wagmi
     // skips an announced wallet whose rdns matches a configured connector, so the passkey isn't listed twice.
     export const PASSKEY_RDNS = "io.nvnmchain.demo.passkey";
-    // Prefix of the passkey wallet's keys in IndexedDB (the accounts SDK's `tempo` database): its accounts and the public
-    // keys of passkeys used on this site.
+    // Prefix of the passkey wallet's keys in IndexedDB: its accounts and the public keys of passkeys used on this site.
     export const PASSKEY_STORAGE_KEY = "nvnm-demo-dapp";
     ```
 
@@ -407,7 +406,7 @@ The steps below follow the demo dApp's web app in `apps/web`. It is a React app 
 
 The dApp stores passkey data in IndexedDB, not `localStorage`. `Storage.idb` is the Accounts SDK's IndexedDB adapter. `Provider.create` already uses it in browsers if you pass no storage.
 
-The adapter writes to an IndexedDB database named `tempo`. It prefixes every key with `options.key`. The dApp sets this to `nvnm-demo-dapp`, so its entries stay apart from those of other apps on the same origin.
+The adapter writes to an IndexedDB database. It prefixes every key with `options.key`. The dApp sets this to `nvnm-demo-dapp`, so its entries stay apart from those of other apps on the same origin.
 
 The dApp's data lives under these keys:
 
