@@ -12,27 +12,58 @@ This page lists peer information for connecting to NVNM Chain (L1) networks.
 
 `nvnm-next-testnet-1` (EVM Chain ID `787223`) runs `reth` execution + Commonware Simplex BFT consensus. Peering is configured via `reth`'s `--trusted-peers` flag with `enode://` URLs. See [Network Details](/resources/network-details) for RPC/explorer endpoints.
 
-<Note title="Private peers — public peer coming soon">
-  These are currently private peers reachable only from within the cluster. Public peer endpoints for external connections will be published soon.
-</Note>
-
-**Trusted Peers** (consensus nodes, in-cluster only)
+**Public Peers** (externally reachable)
 
 ```
-enode://7958b86a8099d3a4c06cd09ec7aa64be6b39a0c38bfc5a6724991a50a1354fdadc0e23698ebce50bc3f1cfcb3516ce9a36b7f916b530074d0fdf9ea8968b920a@nvnm-tempo-testnet-1-rpc-internal-0.nvnm-tempo-testnet-1-rpc-internal-headless.nvnm-tempo-testnet-1.svc.mantra-chain-asia-east2-std.mantra-chain-testnet.testnet:30303
-enode://2ed1d6c915d45bfb71897f08a847cf9e7b4a571ceb6f636b5782f5398acc2d2e09ab023ba07b3ea4277233d47167a3220f2e2ddb6431f390d0f9ccb6ca02bc28@nvnm-tempo-testnet-1-rpc-internal-1.nvnm-tempo-testnet-1-rpc-internal-headless.nvnm-tempo-testnet-1.svc.mantra-chain-asia-east2-std.mantra-chain-testnet.testnet:30303
+enode://f5826a55ca7c92dc04e6da41e061b0b684ae0338bcdec81ed3213ae8b251308b6870ddafee5128ba16268bdff78f2eba8bda6518d175ddc0cd36c606d604f526@34.150.20.80:30303
+enode://2d91f00d8305eb5faf7a002a260ac0d83b6ac4b1a61de7cbdf4021b4476a03360db071e6842f4d3d176c90d9a12c264d77e6c3792634a09a4f483bbceb5c8d70@34.92.172.118:30303
 ```
 
 **P2P Port**: `30303` (used for both peer connections and discovery)
 
-To add these as trusted peers on a node running inside the sandbox devnet cluster:
+To run a node that syncs NVNM Chain testnet using these peers:
+
+1. Download the `nvnm-next-testnet-1` chain specification (genesis) file. `--chain` must point to it. Without it, `tempo node` defaults to Tempo `mainnet` and will not join NVNM Chain testnet:
+
+```bash
+curl -fLo nvnm-testnet.json \
+  https://raw.githubusercontent.com/NVNM-Chain/nvnmchain-tempo/f6a03b7b037bb3060e9b86d0b87fc57d702597de/crates/chainspec/src/genesis/nvnm-testnet.json
+```
+
+2. Generate an ed25519 signing key file. `--consensus.signing-key` takes a **file path**, not a hex key:
+
+```bash
+tempo consensus generate-signing-key --output ./signing.key
+```
+
+3. Restore the latest snapshot. The testnet's state at block `0` includes data migrated from NVNM Chain L2 that the chain spec does not carry, so a node started from the chain spec alone rejects block `1`. Pass the manifest named by the snapshot host's `latest.json` (about 12 GB to download, 22 GB on disk):
+
+```bash
+tempo download \
+  --chain=./nvnm-testnet.json \
+  --minimal \
+  --manifest-url=https://download.nvnm.testnet.nvnmchain.io/787223/manifest.json
+```
+
+4. Start the node with the testnet chain spec, your signing key, the public peers, and `--follow`:
 
 ```bash
 tempo node \
+  --follow=wss://rpc.nvnm.testnet.nvnmchain.io \
+  --chain=./nvnm-testnet.json \
   --port=30303 \
   --discovery.port=30303 \
-  --trusted-peers=enode://7958b86a8099d3a4c06cd09ec7aa64be6b39a0c38bfc5a6724991a50a1354fdadc0e23698ebce50bc3f1cfcb3516ce9a36b7f916b530074d0fdf9ea8968b920a@nvnm-tempo-testnet-1-rpc-internal-0.nvnm-tempo-testnet-1-rpc-internal-headless.nvnm-tempo-testnet-1.svc.mantra-chain-asia-east2-std.mantra-chain-testnet.testnet:30303,enode://2ed1d6c915d45bfb71897f08a847cf9e7b4a571ceb6f636b5782f5398acc2d2e09ab023ba07b3ea4277233d47167a3220f2e2ddb6431f390d0f9ccb6ca02bc28@nvnm-tempo-testnet-1-rpc-internal-1.nvnm-tempo-testnet-1-rpc-internal-headless.nvnm-tempo-testnet-1.svc.mantra-chain-asia-east2-std.mantra-chain-testnet.testnet:30303
+  --consensus.signing-key=./signing.key \
+  --trusted-peers=enode://f5826a55ca7c92dc04e6da41e061b0b684ae0338bcdec81ed3213ae8b251308b6870ddafee5128ba16268bdff78f2eba8bda6518d175ddc0cd36c606d604f526@34.150.20.80:30303,enode://2d91f00d8305eb5faf7a002a260ac0d83b6ac4b1a61de7cbdf4021b4476a03360db071e6842f4d3d176c90d9a12c264d77e6c3792634a09a4f483bbceb5c8d70@34.92.172.118:30303
 ```
+
+- `--follow` syncs certified blocks from the public WebSocket endpoint. Without it, a non-validator node connects to peers but stays at block `0`.
+- `--trusted-peers` connects your node to the execution P2P network, which carries transactions, not blocks.
+- `--consensus.signing-key` only gives your node a consensus P2P identity. A non-validator node never signs blocks.
+
+<Warning>
+  Keep `signing.key` private — never share it or paste its contents. To encrypt it at rest, pass `--secret <passphrase-source>` to `generate-signing-key` and `--consensus.secret <path>` to `tempo node`.
+</Warning>
   </Tab>
   <Tab title="NVNM Chain L1: DevNet 1">
 # DevNet
