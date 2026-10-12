@@ -10,7 +10,7 @@ This page lists peer information for connecting to NVNM Chain (L1) networks.
   <Tab title="NVNM Chain L1: Testnet 1">
 # Testnet
 
-`nvnm-tempo-testnet-1` (EVM Chain ID `787223`) is a fork of [Tempo](https://github.com/tempoxyz/tempo) — `reth` execution + Commonware Simplex BFT consensus. Peering is configured via `reth`'s `--trusted-peers` flag with `enode://` URLs. See [Network Details](/resources/network-details) for RPC/explorer endpoints.
+`nvnm-next-testnet-1` (EVM Chain ID `787223`) runs `reth` execution + Commonware Simplex BFT consensus. Peering is configured via `reth`'s `--trusted-peers` flag with `enode://` URLs. See [Network Details](/resources/network-details) for RPC/explorer endpoints.
 
 **Public Peers** (externally reachable)
 
@@ -23,22 +23,34 @@ enode://2d91f00d8305eb5faf7a002a260ac0d83b6ac4b1a61de7cbdf4021b4476a03360db071e6
 
 To run a node that syncs NVNM Chain testnet using these peers:
 
-<Note title="Testnet chain spec coming soon">
-  `--chain` must point to the `nvnm-tempo-testnet-1` chain specification (genesis) file. Without it, `tempo node` defaults to Tempo `mainnet` and will not join NVNM Chain testnet. The chain spec file will be published soon.
-</Note>
+1. Download the `nvnm-next-testnet-1` chain specification (genesis) file. `--chain` must point to it. Without it, `tempo node` defaults to Tempo `mainnet` and will not join NVNM Chain testnet:
 
-1. Generate an ed25519 signing key file. `--consensus.signing-key` takes a **file path**, not a hex key:
+```bash
+curl -fLo nvnm-testnet.json \
+  https://raw.githubusercontent.com/NVNM-Chain/nvnmchain-tempo/f6a03b7b037bb3060e9b86d0b87fc57d702597de/crates/chainspec/src/genesis/nvnm-testnet.json
+```
+
+2. Generate an ed25519 signing key file. `--consensus.signing-key` takes a **file path**, not a hex key:
 
 ```bash
 tempo consensus generate-signing-key --output ./signing.key
 ```
 
-2. Start the node with the testnet chain spec, your signing key, the public peers, and `--follow`:
+3. Restore the latest snapshot. The testnet's state at block `0` includes data migrated from NVNM Chain L2 that the chain spec does not carry, so a node started from the chain spec alone rejects block `1`. Pass the manifest named by the snapshot host's `latest.json` (about 12 GB to download, 22 GB on disk):
+
+```bash
+tempo download \
+  --chain=./nvnm-testnet.json \
+  --minimal \
+  --manifest-url="$(curl -fsSL https://snapshot.nvnm.testnet.nvnmchain.io/latest.json | jq -r .manifest_url)"
+```
+
+4. Start the node with the testnet chain spec, your signing key, the public peers, and `--follow`:
 
 ```bash
 tempo node \
-  --follow=wss://ws.nvnm.testnet.nvnmchain.io \
-  --chain=<path-to-nvnm-tempo-testnet-1-chainspec.json> \
+  --follow=wss://rpc.nvnm.testnet.nvnmchain.io \
+  --chain=./nvnm-testnet.json \
   --port=30303 \
   --discovery.port=30303 \
   --consensus.signing-key=./signing.key \
@@ -56,7 +68,7 @@ tempo node \
   <Tab title="NVNM Chain L1: DevNet 1">
 # DevNet
 
-`nvnm-tempo-devnet-1` (EVM Chain ID `787222`) is a fork of [Tempo](https://github.com/tempoxyz/tempo) — `reth` execution + Commonware Simplex BFT consensus. Peering is configured via `reth`'s `--trusted-peers` flag with `enode://` URLs. See [Network Details](/resources/network-details) for RPC/explorer endpoints.
+`nvnm-next-devnet-1` (EVM Chain ID `787222`) runs `reth` execution + Commonware Simplex BFT consensus. Peering is configured via `reth`'s `--trusted-peers` flag with `enode://` URLs. See [Network Details](/resources/network-details) for RPC/explorer endpoints.
 
 <Note title="Closed sandbox devnet — not externally reachable">
   This devnet's P2P port is **not** exposed outside — there is no public load balancer for it. The peers below only work for nodes running inside that cluster network.
