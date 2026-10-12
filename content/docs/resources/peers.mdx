@@ -42,7 +42,7 @@ tempo consensus generate-signing-key --output ./signing.key
 tempo download \
   --chain=./nvnm-testnet.json \
   --minimal \
-  --manifest-url="$(curl -fsSL https://snapshot.nvnm.testnet.nvnmchain.io/latest.json | jq -r .manifest_url)"
+  --manifest-url=https://download.nvnm.testnet.nvnmchain.io/787223/manifest.json
 ```
 
 4. Start the node with the testnet chain spec, your signing key, the public peers, and `--follow`:
