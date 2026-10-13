@@ -1,0 +1,317 @@
+---
+title: "NVNM ERC20 Token"
+description: "Technical reference for the NVNM ERC-20 token: contract design, roles, pause and upgrade controls, EIP-2612 permits, deployments, and how to integrate it."
+icon: "coins"
+---
+
+NVNM Token (`NVNM`) is an upgradeable ERC-20 token on Ethereum. This page covers how the contract works, who controls it, and what to watch for when you integrate it. The source code, tests, and deployment tooling are in [NVNM-Chain/nvnm-erc20](https://github.com/NVNM-Chain/nvnm-erc20) on GitHub.
+
+<Note title="An Ethereum token, not a TIP-20 token">
+  NVNM Token is a standard ERC-20 contract deployed on Ethereum networks. It isn't a TIP-20 token on NVNM Chain, and it doesn't pay NVNM Chain fees. It uses **18 decimals**, while NVNM Chain's TIP-20 stablecoins such as nUSD use 6 decimals.
+</Note>
+
+## Deployments
+
+| Network | Chain ID | Token address (proxy) | Implementation | Status |
+| --- | --- | --- | --- | --- |
+| Sepolia (testnet) | `11155111` | [`0x1C9E8420062B80E97812b56812d035B40dBa158A`](https://sepolia.etherscan.io/address/0x1C9E8420062B80E97812b56812d035B40dBa158A) | [`0x883427FCD9502dc0a136880ccfC1cb2BAd3A0052`](https://sepolia.etherscan.io/address/0x883427FCD9502dc0a136880ccfC1cb2BAd3A0052) | Live |
+| Ethereum mainnet | `1` | — | — | Coming soon |
+
+Both Sepolia contracts are source-verified on Etherscan and Sourcify. Always integrate against the **proxy address**. It's the token address, and it stays the same when the implementation changes. Never call the implementation contract directly.
+
+<Warning title="The Sepolia deployment is a pipeline test">
+  The Sepolia deployment exists to exercise the deployment and verification pipeline. It isn't a preview of the production configuration. One test key holds its treasury and all three roles, so the role separation described on this page doesn't apply there. Sepolia NVNM tokens have no value.
+</Warning>
+
+<Info title="Ethereum mainnet is coming soon">
+  There is no Ethereum mainnet deployment yet. The production treasury and role addresses in the repository's `script/config/Config.sol` are still set to `address(0)`. Any production deployment reverts until governance approves those addresses in a reviewed change. This page will list the mainnet address once the token is deployed.
+</Info>
+
+## Token parameters
+
+| Parameter | Value |
+| --- | --- |
+| Name / symbol | `NVNM Token` / `NVNM` |
+| Decimals | `18` |
+| Total supply | 1,000,000,000 NVNM, minted once to the treasury at initialization |
+| Standard | ERC-20 with EIP-2612 `permit` |
+| Upgrade mechanism | UUPS implementation behind an ERC-1967 proxy |
+| Transfer controls | Global pause only. No account blocklist. |
+| Supply controls | None. No mint, burn, seizure, or rescue function. |
+| License | MIT |
+
+## Contract design
+
+`NVNMToken` composes OpenZeppelin Contracts Upgradeable v5 modules. It adds no state, no assembly, and no logic beyond:
+
+- An initializer that mints the supply and assigns the roles
+- Two pause entry points, `pause()` and `unpause()`
+- The UUPS upgrade authorization hook, `_authorizeUpgrade`
+- One `_update` override that the compiler requires to resolve `ERC20` against `ERC20Pausable`
+
+```solidity title="src/NVNMToken.sol"
+contract NVNMToken is
+    Initializable,
+    ERC20Upgradeable,
+    ERC20PausableUpgradeable,
+    ERC20PermitUpgradeable,
+    AccessControlEnumerableUpgradeable,
+    UUPSUpgradeable
+{
+    bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
+    bytes32 public constant UPGRADER_ROLE = keccak256("UPGRADER_ROLE");
+
+    uint256 public constant INITIAL_SUPPLY = 1_000_000_000 * 1e18;
+    // ...
+}
+```
+
+View on GitHub: [`src/NVNMToken.sol`](https://github.com/NVNM-Chain/nvnm-erc20/blob/main/src/NVNMToken.sol)
+
+| Module | What it provides |
+| --- | --- |
+| `ERC20Upgradeable` | Standard balances, transfers, and allowances |
+| `ERC20PausableUpgradeable` | A global switch that stops every transfer |
+| `ERC20PermitUpgradeable` | EIP-2612 gasless approvals through signed messages |
+| `AccessControlEnumerableUpgradeable` | Role-based permissions, with role members you can list on chain |
+| `UUPSUpgradeable` | Upgrade logic that lives in the implementation, gated by `UPGRADER_ROLE` |
+
+### Proxy and initialization
+
+The token uses the UUPS proxy pattern. An ERC-1967 proxy holds all balances and state, and delegates every call to an implementation contract. The implementation address is stored in the standard ERC-1967 slot, so any block explorer or tool can read it.
+
+Deployment creates the proxy and initializes it in a single transaction. The deploy script passes the `initialize` call as the proxy constructor's data, so an unconfigured proxy never exists. The implementation's constructor calls `_disableInitializers()`, so nobody can initialize the implementation contract directly.
+
+`initialize` takes a struct rather than four positional addresses, so a transposed argument can't silently assign a power to the wrong wallet:
+
+```solidity title="src/NVNMToken.sol"
+struct InitParams {
+    address recipient;    // Receives INITIAL_SUPPLY. The treasury Safe.
+    address defaultAdmin; // Holder of DEFAULT_ADMIN_ROLE
+    address pauser;       // Holder of PAUSER_ROLE
+    address upgrader;     // Holder of UPGRADER_ROLE
+}
+```
+
+`initialize` reverts with `ZeroAddress(argument)` if any of the four addresses is the zero address.
+
+### Storage layout
+
+The contract declares no storage variables of its own. Every slot it uses belongs to an inherited OpenZeppelin module, and each module keeps its state in its own [ERC-7201](https://eips.ethereum.org/EIPS/eip-7201) namespace. An empty ordinary storage layout is the expected result when you inspect the contract. It doesn't mean the proxy holds no state.
+
+Future implementations must keep every existing namespace and its field layout. New state goes in new ERC-7201 namespaced structs.
+
+## Roles and access control
+
+Three roles control the token:
+
+| Role | Role ID | Authority |
+| --- | --- | --- |
+| `DEFAULT_ADMIN_ROLE` | `0x00…00` | Grants and revokes all three roles, including granting itself upgrade authority |
+| `UPGRADER_ROLE` | `keccak256("UPGRADER_ROLE")` | Replaces the implementation through `upgradeToAndCall`, and can run migration code in the same transaction |
+| `PAUSER_ROLE` | `keccak256("PAUSER_ROLE")` | Pauses and unpauses transfers for every account |
+
+On production networks, each role is expected to go to a separate multisig, distinct from the treasury that holds the supply. The deployment config enforces separation between the three roles on production networks, and refuses to deploy if two of them share an address. The pauser can use a lower signing threshold than the admin and upgrader, so it can respond quickly to an incident.
+
+<Warning title="No timelock">
+  No timelock constrains these roles on any network. An upgrade or role change takes effect in the transaction that executes it, with no on-chain delay or advance notice. The `RoleGranted`, `RoleRevoked`, and `Upgraded` events record every change permanently.
+</Warning>
+
+### Check who holds each role
+
+Because the token uses `AccessControlEnumerable`, you can list role members with a contract call instead of scanning event logs:
+
+```bash
+TOKEN=0x1C9E8420062B80E97812b56812d035B40dBa158A
+RPC_URL=https://ethereum-sepolia-rpc.publicnode.com
+
+# Number of upgraders, then the first one
+cast call $TOKEN "getRoleMemberCount(bytes32)(uint256)" $(cast keccak "UPGRADER_ROLE") --rpc-url $RPC_URL
+cast call $TOKEN "getRoleMember(bytes32,uint256)(address)" $(cast keccak "UPGRADER_ROLE") 0 --rpc-url $RPC_URL
+
+# Admins use the zero role ID
+cast call $TOKEN "getRoleMembers(bytes32)(address[])" 0x0000000000000000000000000000000000000000000000000000000000000000 --rpc-url $RPC_URL
+
+# Current implementation, read from the ERC-1967 implementation slot
+cast storage $TOKEN 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc --rpc-url $RPC_URL
+```
+
+## What the token can't do
+
+No role, and no combination of roles, can call any of the following on the current implementation, because none of them exist:
+
+| Absent capability | Consequence |
+| --- | --- |
+| Mint | Supply can't increase. There is no issuance function of any kind. |
+| Burn, seize, or claw back | No role can destroy or move another account's tokens. |
+| Blocklist, freeze, or allowlist | No role can single out, restrict, or deny an account. |
+| Transfer fee or tax | Transfers deliver the exact amount sent. |
+| Rebase | Balances change only through transfers. |
+| Wallet cap, transaction cap, or trading toggle | No limits on holding or trading size. |
+| Rescue | The contract can't recover tokens or ether sent to the proxy address. |
+
+Transfers make no callback to the recipient, so the token adds no reentrancy surface to the contracts that integrate it.
+
+<Note title="Upgrades are the boundary on these guarantees">
+  These properties hold for the current implementation. `UPGRADER_ROLE` can replace the implementation with code that adds minting, seizure, account restrictions, or other behavior. When you evaluate the token, evaluate who holds upgrade authority.
+</Note>
+
+## Pause behavior
+
+`PAUSER_ROLE` can halt all value movement with `pause()` and resume it with `unpause()`. The pause is all-or-nothing:
+
+- It applies to every account equally, including the treasury and every role holder.
+- You can't pause a single account.
+- Zero-value transfers stop along with everything else.
+
+A pause only stops value movement. It doesn't stop `approve`, `permit`, role changes, or upgrades. Balances and allowances stay readable. Allowances and permit signatures created during a pause authorize transfers once the token resumes.
+
+Check whether the token is paused:
+
+```bash
+cast call $TOKEN "paused()(bool)" --rpc-url $RPC_URL
+```
+
+## Upgrades
+
+The token is upgradeable by design, so it can meet compliance obligations, fix defects, and adapt to future integration needs. `upgradeToAndCall` can run migration code in the same transaction as the upgrade.
+
+During an upgrade, UUPS checks the new implementation's `proxiableUUID`. That check confirms the new contract is a valid UUPS implementation. It doesn't prove the new contract is correct, safe, or storage-compatible. The repository validates each successor against archived build information from the approved implementation, and rehearses migrations against realistic state.
+
+If every admin and every upgrader is lost or renounced, the current implementation has no recovery path. The token then keeps operating under its current rules permanently.
+
+## EIP-2612 permits
+
+`permit` lets a holder approve a spender with a signed message instead of an `approve` transaction. The spender, or a relayer, submits the signature on chain.
+
+The EIP-712 signing domain is:
+
+| Field | Value |
+| --- | --- |
+| `name` | `NVNM Token` |
+| `version` | `1` |
+| `chainId` | The current chain ID, for example `11155111` on Sepolia |
+| `verifyingContract` | The proxy address |
+
+Read the live domain and an owner's current nonce:
+
+```bash
+cast call $TOKEN "eip712Domain()(bytes1,string,string,uint256,address,bytes32,uint256[])" --rpc-url $RPC_URL
+cast call $TOKEN "nonces(address)(uint256)" <OWNER_ADDRESS> --rpc-url $RPC_URL
+```
+
+Sign a permit with viem:
+
+```ts title="sign-permit.ts"
+import { createWalletClient, http, parseUnits } from "viem";
+import { privateKeyToAccount } from "viem/accounts";
+import { sepolia } from "viem/chains";
+
+const token = "0x1C9E8420062B80E97812b56812d035B40dBa158A";
+const account = privateKeyToAccount(process.env.PRIVATE_KEY as `0x${string}`);
+const client = createWalletClient({ account, chain: sepolia, transport: http() });
+
+const signature = await client.signTypedData({
+  domain: {
+    name: "NVNM Token",
+    version: "1",
+    chainId: sepolia.id,
+    verifyingContract: token,
+  },
+  types: {
+    Permit: [
+      { name: "owner", type: "address" },
+      { name: "spender", type: "address" },
+      { name: "value", type: "uint256" },
+      { name: "nonce", type: "uint256" },
+      { name: "deadline", type: "uint256" },
+    ],
+  },
+  primaryType: "Permit",
+  message: {
+    owner: account.address,
+    spender: "0xSPENDER_ADDRESS",
+    value: parseUnits("100", 18), // NVNM uses 18 decimals
+    nonce: 0n, // read the current value from nonces(owner)
+    deadline: BigInt(Math.floor(Date.now() / 1000) + 3600),
+  },
+});
+```
+
+Permit signatures are ECDSA only. The token doesn't support ERC-1271 signatures, so smart contract wallets can't use `permit`. Offer a standard `approve` path alongside it.
+
+## Notes for integrators
+
+- **Use the proxy address.** It's the token address. The implementation can change.
+- **Plan for a pause.** A pause stops DEX swaps, bridge withdrawals, and lending liquidations that involve NVNM. Third-party positions can lose value even though token balances don't change.
+- **Handle permit races.** A competing submission can use a permit nonce before your transaction lands. Handle a nonce that's already consumed.
+- **Watch allowance changes.** Replacing a standard ERC-20 allowance carries transaction-ordering risk. In OpenZeppelin v5, `transferFrom` doesn't decrease an infinite (`type(uint256).max`) allowance.
+- **Don't send funds to the token contract.** The current implementation has no rescue function, so tokens or ether sent to the proxy can't be recovered.
+- **Chain splits share a domain.** A chain split that keeps the same chain ID doesn't produce separate permit domains.
+
+## Build and verify
+
+The repository pins its toolchain so you can reproduce the deployed bytecode:
+
+| Setting | Value |
+| --- | --- |
+| Solidity | `0.8.37` |
+| EVM version | `prague` |
+| Optimizer | Enabled, 1,000,000 runs |
+| `via_ir` | `false` |
+| OpenZeppelin Contracts | `v5.7.0` |
+| Foundry | `1.8.3` |
+
+To build and test locally, install Foundry 1.8.3, Node.js 24.21.0, and Python 3.12. Then run:
+
+```bash
+git clone --recurse-submodules https://github.com/NVNM-Chain/nvnm-erc20.git
+cd nvnm-erc20
+make install
+make build
+make test
+```
+
+You only need an RPC endpoint, a wallet, and a `.env` file for network operations. The main `make` targets:
+
+| Command | Purpose |
+| --- | --- |
+| `make build` | Compile and report contract sizes |
+| `make test` | Unit, fuzz, invariant, deployment, and gas tests |
+| `make validate-upgrade` | Upgrade-safety validation of the current implementation |
+| `make check` | Formatting, lint, tests, dependency, ABI, upgrade, storage, and gas checks |
+| `make release-check` | All local checks, including Slither |
+| `make verify NETWORK=sepolia` | Check the live proxy against an approved local build and supplied `EXPECTED_*` values |
+
+`script/VerifyDeployment.s.sol` compares the deployed proxy and implementation bytecode against your local build. It also checks the chain ID, implementation address, role members, pause state, token metadata, supply, and EIP-712 domain against expectations you supply. Take those expectations from an independently reviewed record, not from the deployment you're checking.
+
+## Gas costs
+
+The proxy adds roughly 1,500 to 1,700 gas per call compared with a plain OpenZeppelin ERC-20, for the `delegatecall` and the pause check. These figures come from the repository's [gas report](https://github.com/NVNM-Chain/nvnm-erc20/blob/main/docs/GAS.md) and measure gas inside the call frame. They exclude the 21,000 gas base transaction cost, calldata, and refunds.
+
+| Operation | `NVNMToken` | Plain OpenZeppelin ERC-20 |
+| --- | ---: | ---: |
+| `transfer` to an existing holder | 10,960 | 9,308 |
+| `transfer` to a first-time holder | 28,048 | 26,390 |
+| `approve`, first approval | 26,717 | 25,213 |
+| `transferFrom`, finite allowance | 11,934 | 10,262 |
+| `transferFrom`, infinite allowance | 11,522 | 9,861 |
+
+Deploying the implementation costs 2,625,068 gas (12,814 bytes of runtime code). Deploying the proxy costs 536,152 gas.
+
+## Security
+
+Report vulnerabilities privately to [security@nvnmchain.io](mailto:security@nvnmchain.io). Don't post exploit details in a public issue before coordinated disclosure. See [`SECURITY.md`](https://github.com/NVNM-Chain/nvnm-erc20/blob/main/SECURITY.md) for scope and reporting guidance.
+
+The repository publishes independent audit reports in [`audits/`](https://github.com/NVNM-Chain/nvnm-erc20/tree/main/audits) as they're completed. For the full control surface, read the [trust model](https://github.com/NVNM-Chain/nvnm-erc20/blob/main/docs/TRUST-MODEL.md).
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="NVNM ERC-20 on GitHub" icon="code" href="https://github.com/NVNM-Chain/nvnm-erc20">
+    Read the contract source, tests, deployment scripts, and trust model.
+  </Card>
+  <Card title="Deploy and interact with smart contracts" icon="book" href="/developer-guides/smart-contracts">
+    Deploy Solidity contracts to NVNM Chain with Foundry and call them from a React app.
+  </Card>
+</CardGroup>
