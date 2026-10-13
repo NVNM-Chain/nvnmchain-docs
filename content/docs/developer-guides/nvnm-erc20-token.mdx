@@ -4,10 +4,10 @@ description: "Technical reference for the NVNM ERC-20 token: contract design, ro
 icon: "coins"
 ---
 
-NVNM Token (`NVNM`) is an upgradeable ERC-20 token on Ethereum. This page covers how the contract works, who controls it, and what to watch for when you integrate it. The source code, tests, and deployment tooling are in [NVNM-Chain/nvnm-erc20](https://github.com/NVNM-Chain/nvnm-erc20) on GitHub.
+NVNM Token (`NVNM`) is an upgradeable ERC-20 token for Ethereum and Base. This page covers how the contract works, who controls it, and what to watch for when you integrate it. The source code, tests, and deployment tooling are in [NVNM-Chain/nvnm-erc20](https://github.com/NVNM-Chain/nvnm-erc20) on GitHub.
 
 <Note title="An Ethereum token, not a TIP-20 token">
-  NVNM Token is a standard ERC-20 contract deployed on Ethereum networks. It isn't a TIP-20 token on NVNM Chain, and it doesn't pay NVNM Chain fees. It uses **18 decimals**, while NVNM Chain's TIP-20 stablecoins such as nUSD use 6 decimals.
+  NVNM Token is a standard ERC-20 contract for Ethereum and Base. It isn't a TIP-20 token on NVNM Chain, and it doesn't pay NVNM Chain fees. It uses **18 decimals**, while NVNM Chain's TIP-20 stablecoins such as nUSD use 6 decimals.
 </Note>
 
 ## Deployments
@@ -16,6 +16,7 @@ NVNM Token (`NVNM`) is an upgradeable ERC-20 token on Ethereum. This page covers
 | --- | --- | --- | --- | --- |
 | Sepolia (testnet) | `11155111` | [`0x1C9E8420062B80E97812b56812d035B40dBa158A`](https://sepolia.etherscan.io/address/0x1C9E8420062B80E97812b56812d035B40dBa158A) | [`0x883427FCD9502dc0a136880ccfC1cb2BAd3A0052`](https://sepolia.etherscan.io/address/0x883427FCD9502dc0a136880ccfC1cb2BAd3A0052) | Live |
 | Ethereum mainnet | `1` | — | — | Coming soon |
+| Base mainnet | `8453` | — | — | Coming soon |
 
 Both Sepolia contracts are source-verified on Etherscan and Sourcify. Always integrate against the **proxy address**. It's the token address, and it stays the same when the implementation changes. Never call the implementation contract directly.
 
@@ -23,8 +24,10 @@ Both Sepolia contracts are source-verified on Etherscan and Sourcify. Always int
   The Sepolia deployment exists to exercise the deployment and verification pipeline. It isn't a preview of the production configuration. One test key holds its treasury and all three roles, so the role separation described on this page doesn't apply there. Sepolia NVNM tokens have no value.
 </Warning>
 
-<Info title="Ethereum mainnet is coming soon">
-  There is no Ethereum mainnet deployment yet. The production treasury and role addresses in the repository's `script/config/Config.sol` are still set to `address(0)`. Any production deployment reverts until governance approves those addresses in a reviewed change. This page will list the mainnet address once the token is deployed.
+<Info title="Ethereum mainnet and Base mainnet are coming soon">
+  There is no Ethereum mainnet or Base mainnet deployment yet. The production treasury and role addresses in the repository's `script/config/Config.sol` are still set to `address(0)`. Any production deployment reverts until governance approves those addresses in a reviewed change. This page will list the mainnet addresses once the token is deployed.
+
+  Each network has its own set of treasury and role addresses. Don't assume the token, treasury, or role holders share an address across Ethereum and Base. Check the addresses for each network once they're published.
 </Info>
 
 ## Token parameters
