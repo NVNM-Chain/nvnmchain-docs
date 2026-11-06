@@ -26,16 +26,12 @@ export const siteConfig = {
       href: 'https://hub.inveniam.io',
     },
   },
-  banner: {
-    content: 'NVNM Testnet is now LIVE! For documentation relating to the NVNM Closed Beta L2, visit https://legacy.docs.nvnmchain.io',
-    dismissible: true,
-  },
 }
 
 // Pre-release channel palette. The `next` docs use violet in both modes so the
 // site reads as "not production" at a glance, while production docs keep the
-// NVNM brand blue. Amber stays reserved for instability warnings (site banner,
-// warning callouts) so those still stand out against the accent.
+// NVNM brand blue. Amber stays reserved for warning callouts so those still
+// stand out against the accent.
 //
 // These values are mirrored in app/globals.css, which is what actually renders
 // the theme. __tests__/lib/theme-config.test.ts fails if the two drift apart.

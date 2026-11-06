@@ -92,3 +92,12 @@ describe('MDX frontmatter', () => {
     expect(fm.title, `"${slug}" is missing a frontmatter title`).toBeTruthy()
   })
 })
+
+describe('Homepage content', () => {
+  it('does not include the retired closed-beta callout or legacy docs link', () => {
+    const content = readFileSync(mdxPath('index'), 'utf-8')
+    expect(content).not.toContain('For Closed-Beta NVNM Chain (L2)')
+    expect(content).not.toContain('legacy.docs.nvnmchain.io')
+    expect(content).toContain('A word about NVNM Chain NEXT (L1)')
+  })
+})

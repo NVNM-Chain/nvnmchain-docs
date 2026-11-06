@@ -22,9 +22,8 @@ describe('siteConfig', () => {
     expect(() => new URL(siteConfig.url)).not.toThrow()
   })
 
-  it('has a non-dismissible banner with non-empty content', () => {
-    expect(siteConfig.banner.dismissible).toBe(false)
-    expect(siteConfig.banner.content).toBeTruthy()
+  it('does not configure the retired announcement banner', () => {
+    expect(siteConfig).not.toHaveProperty('banner')
   })
 
   it('has at least one footer link', () => {

@@ -1,7 +1,6 @@
 import { source } from '@/lib/docs-source'
 import { DocsSidebar } from '../components/docs/docs-sidebar'
 import { DocsHeader } from '../components/docs/docs-header'
-import { SiteBanner } from '../components/docs/site-banner'
 import { siteConfig } from '@/lib/theme-config'
 
 export default function DocsLayout({
@@ -10,13 +9,9 @@ export default function DocsLayout({
   children: React.ReactNode
 }) {
   const tree = source.pageTree
-  const banner = (siteConfig as { banner?: { content: string; dismissible?: boolean } }).banner
 
   return (
     <div className="min-h-screen flex flex-col">
-      {banner && (
-        <SiteBanner content={banner.content} dismissible={banner.dismissible} />
-      )}
       <DocsHeader tree={tree} />
       <div className="flex-1">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
