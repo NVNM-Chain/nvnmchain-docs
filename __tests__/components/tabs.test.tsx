@@ -16,41 +16,41 @@ describe('Tabs', () => {
 
   it('renders all tab titles', () => {
     renderTabs()
-    expect(screen.getByRole('button', { name: 'Alpha' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Beta' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Gamma' })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: 'Alpha' })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: 'Beta' })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: 'Gamma' })).toBeInTheDocument()
   })
 
   it('shows the first tab content by default', () => {
     renderTabs()
-    expect(screen.getByText('Content A')).toBeInTheDocument()
-    expect(screen.queryByText('Content B')).not.toBeInTheDocument()
+    expect(screen.getByText('Content A')).toBeVisible()
+    expect(screen.getByText('Content B')).not.toBeVisible()
   })
 
   it('switches content when another tab is clicked', async () => {
     const user = userEvent.setup()
     renderTabs()
 
-    await user.click(screen.getByRole('button', { name: 'Beta' }))
-    expect(screen.getByText('Content B')).toBeInTheDocument()
-    expect(screen.queryByText('Content A')).not.toBeInTheDocument()
+    await user.click(screen.getByRole('tab', { name: 'Beta' }))
+    expect(screen.getByText('Content B')).toBeVisible()
+    expect(screen.getByText('Content A')).not.toBeVisible()
   })
 
   it('respects the defaultValue prop', () => {
     render(
       <Tabs defaultValue="Beta">
-        <Tab title="Alpha" value="Alpha">Content A</Tab>
-        <Tab title="Beta" value="Beta">Content B</Tab>
+        <Tab title="Alpha">Content A</Tab>
+        <Tab title="Beta">Content B</Tab>
       </Tabs>
     )
-    expect(screen.getByText('Content B')).toBeInTheDocument()
-    expect(screen.queryByText('Content A')).not.toBeInTheDocument()
+    expect(screen.getByText('Content B')).toBeVisible()
+    expect(screen.getByText('Content A')).not.toBeVisible()
   })
 })
 
 describe('Tab', () => {
-  it('renders its children passthrough', () => {
-    render(<Tab title="T">Inner text</Tab>)
-    expect(screen.getByText('Inner text')).toBeInTheDocument()
+  it('provides its content to the parent Tabs', () => {
+    render(<Tabs><Tab title="T">Inner text</Tab></Tabs>)
+    expect(screen.getByRole('tabpanel', { name: 'T' })).toHaveTextContent('Inner text')
   })
 })

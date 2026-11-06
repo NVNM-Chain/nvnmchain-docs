@@ -3,14 +3,14 @@ import { render, screen } from '@testing-library/react'
 import { Frame } from '@/app/components/docs/mdx/frame'
 
 describe('Frame', () => {
-  it('renders children inside a figure element', () => {
+  it('renders children inside a bordered frame', () => {
     render(<Frame><img src="/test.png" alt="test" /></Frame>)
-    expect(screen.getByRole('figure')).toBeInTheDocument()
+    expect(screen.getByRole('img', { name: 'test' }).parentElement).toHaveClass('border')
   })
 
-  it('renders a figcaption when caption is provided', () => {
-    render(<Frame caption="Image caption">Content</Frame>)
-    expect(screen.getByText('Image caption')).toBeInTheDocument()
+  it('applies a custom class to the frame', () => {
+    render(<Frame className="custom-frame">Content</Frame>)
+    expect(screen.getByText('Content')).toHaveClass('custom-frame')
   })
 
   it('does not render a figcaption when no caption is given', () => {

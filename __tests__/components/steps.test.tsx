@@ -24,8 +24,9 @@ describe('Step', () => {
     expect(screen.getByText('Step body')).toBeInTheDocument()
   })
 
-  it('renders children without a title', () => {
-    render(<Step>Just content</Step>)
+  it('renders rich children beneath the required title', () => {
+    render(<Step title="Step title"><p>Just content</p></Step>)
+    expect(screen.getByRole('heading', { name: 'Step title' })).toBeInTheDocument()
     expect(screen.getByText('Just content')).toBeInTheDocument()
   })
 })
