@@ -17,7 +17,7 @@ This repo publishes MDX-based docs for users and operators, plus technical chain
 
 ## Tech stack
 
-- Next.js 15
+- Next.js 16
 - React 19
 - Fumadocs (`fumadocs-core`, `fumadocs-mdx`)
 - Tailwind CSS 4
@@ -68,6 +68,10 @@ pnpm build
 ```bash
 pnpm build:worker
 ```
+
+OpenNext runs the Next.js build and bundles the Worker. The build uses webpack
+for compatibility with the MDX pipeline. Use a supported Next.js release;
+OpenNext rejects releases outside the Next.js support window.
 
 ### Deploy to Cloudflare
 
