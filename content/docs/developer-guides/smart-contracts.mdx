@@ -80,6 +80,7 @@ via_ir = true
 [rpc_endpoints]
 nvnm_testnet = "https://rpc.nvnm.testnet.nvnmchain.io" # chain id 787223
 nvnm_devnet = "https://rpc.nvnm.canary.mantrachain.dev" # chain id 787222
+# nvnm_mainnet = "TBD" # Mainnet RPC URL and chain id: pending launch, see /resources/network-details
 
 # ...
 ```
@@ -87,6 +88,10 @@ nvnm_devnet = "https://rpc.nvnm.canary.mantrachain.dev" # chain id 787222
 View on GitHub: [`packages/contracts/foundry.toml`](https://github.com/NVNM-Chain/nvnm-demo-dapp/blob/main/packages/contracts/foundry.toml)
 
 You can now pass `--rpc-url nvnm_devnet` or `--rpc-url nvnm_testnet` instead of a full URL. For all endpoints, see [Network details](/resources/network-details).
+
+<Note>
+  Mainnet has not launched yet. Add an `nvnm_mainnet` entry once its RPC URL and chain ID are published on [Network details](/resources/network-details).
+</Note>
 
 ### Write the contract
 

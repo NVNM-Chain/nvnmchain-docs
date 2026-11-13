@@ -1,12 +1,73 @@
 ---
 title: "Peers"
-description: "Trusted peers for NVNM Chain (L1)"
+description: "Trusted peers for NVNM Chain (L1) Mainnet, Testnet, and DevNet"
 icon: "link"
 ---
 
 This page lists peer information for connecting to NVNM Chain (L1) networks.
 
 <Tabs>
+  <Tab title="NVNM Chain L1: Mainnet">
+# Mainnet
+
+<Warning title="Mainnet details pending">
+  NVNM Chain L1 Mainnet has not launched yet. Every value marked `TBD` below is a placeholder: the chain ID, network name, public peers, chain specification URL, snapshot manifest URL, and WebSocket endpoint will be filled in before launch. Do not try to sync a Mainnet node until they are published.
+</Warning>
+
+`TBD` (EVM Chain ID `TBD`) runs `reth` execution + Commonware Simplex BFT consensus. Peering is configured via `reth`'s `--trusted-peers` flag with `enode://` URLs. See [Network Details](/resources/network-details) for RPC/explorer endpoints.
+
+**Public Peers** (externally reachable)
+
+```
+TBD
+```
+
+**P2P Port**: `30303` (used for both peer connections and discovery)
+
+To run a node that syncs NVNM Chain Mainnet using these peers:
+
+1. Download the Mainnet chain specification (genesis) file. `--chain` must point to it. Without it, `tempo node` defaults to Tempo `mainnet` and will not join NVNM Chain Mainnet:
+
+```bash
+curl -fLo nvnm-mainnet.json \
+  TBD
+```
+
+2. Generate an ed25519 signing key file. `--consensus.signing-key` takes a **file path**, not a hex key:
+
+```bash
+tempo consensus generate-signing-key --output ./signing.key
+```
+
+3. Restore the latest snapshot. Pass the manifest named by the snapshot host's `latest.json`:
+
+```bash
+tempo download \
+  --chain=./nvnm-mainnet.json \
+  --minimal \
+  --manifest-url=TBD
+```
+
+4. Start the node with the Mainnet chain spec, your signing key, the public peers, and `--follow`:
+
+```bash
+tempo node \
+  --follow=TBD \
+  --chain=./nvnm-mainnet.json \
+  --port=30303 \
+  --discovery.port=30303 \
+  --consensus.signing-key=./signing.key \
+  --trusted-peers=TBD
+```
+
+- `--follow` syncs certified blocks from the public WebSocket endpoint. Without it, a non-validator node connects to peers but stays at block `0`.
+- `--trusted-peers` connects your node to the execution P2P network, which carries transactions, not blocks.
+- `--consensus.signing-key` only gives your node a consensus P2P identity. A non-validator node never signs blocks.
+
+<Warning>
+  Keep `signing.key` private — never share it or paste its contents. To encrypt it at rest, pass `--secret <passphrase-source>` to `generate-signing-key` and `--consensus.secret <path>` to `tempo node`.
+</Warning>
+  </Tab>
   <Tab title="NVNM Chain L1: Testnet 1">
 # Testnet
 
